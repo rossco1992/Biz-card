@@ -8,11 +8,13 @@ export default async function PublicCardPage({ params }: { params: Promise<{ slu
 
   if (!profile) notFound();
 
-  const initials = profile.full_name
+  const initials = String(profile.full_name)
     .split(" ")
-    .map((part) => part[0])
+    .map((part: string) => part[0])
     .slice(0, 2)
     .join("");
+
+  const firstName = String(profile.full_name).split(" ")[0];
 
   return (
     <main className="shell">
@@ -30,7 +32,7 @@ export default async function PublicCardPage({ params }: { params: Promise<{ slu
 
       <div className="eyebrow">Instant contact exchange</div>
       <h1 className="heroTitle" style={{ fontSize: 42 }}>Swap contacts.</h1>
-      <p className="heroCopy">Share your info with {profile.full_name.split(" ")[0]}. Right after, you can save {profile.full_name.split(" ")[0]} directly to your phone.</p>
+      <p className="heroCopy">Share your info with {firstName}. Right after, you can save {firstName} directly to your phone.</p>
 
       <ConnectForm profile={profile} />
     </main>
