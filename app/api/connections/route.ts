@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Resend } from "resend";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
 
   const supabase = getSupabaseAdmin();
 
-  // Demo mode lets the UI be tested before Supabase is connected.
+  // Demo mode lets the public UX be previewed before the backend is connected.
   if (!supabase || String(profile.id).startsWith("demo-")) {
     const delayHours = profile.active_mode?.delay_hours ?? 24;
     return NextResponse.json({
@@ -69,32 +70,83 @@ export async function POST(request: Request) {
   }
 
   let scheduledAt: string | null = null;
+  let followupStatus: "paused" | "scheduled" | "failed" = "paused";
 
   if (profile.followup_enabled && mode) {
-    const delayHours = mode.delay_hours ?? 24;
+    // Resend's scheduled email API currently supports up to 72 hours ahead.
+    const delayHours = Math.min(72, Math.max(1, mode.delay_hours ?? 24));
     scheduledAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
     const values = {
       first_name: firstName,
       last_name: lastName,
       full_name: [firstName, lastName].filter(Boolean).join(" "),
     };
+    const subject = merge(mode.subject_template, values);
+    const text = merge(mode.body_template, values);
 
-    const { error: followupError } = await supabase.from("followups").insert({
-      connection_id: connection.id,
-      profile_id: profile.id,
-      mode_id: mode.id,
-      send_at: scheduledAt,
-      status: "scheduled",
-      subject_snapshot: merge(mode.subject_template, values),
-      body_snapshot: merge(mode.body_template, values),
-      recipient_email: email,
-    });
+    const { data: followup, error: followupError } = await supabase
+      .from("followups")
+      .insert({
+        connection_id: connection.id,
+        profile_id: profile.id,
+        mode_id: mode.id,
+        send_at: scheduledAt,
+        status: "scheduled",
+        subject_snapshot: subject,
+        body_snapshot: text,
+        recipient_email: email,
+      })
+      .select("id")
+      .single();
 
-    if (followupError) {
+    if (followupError || !followup) {
       console.error("followup insert failed", followupError);
       return NextResponse.json({ error: "Connection saved, but follow-up scheduling failed." }, { status: 500 });
     }
+
+    const resendKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.FOLLOWUP_FROM_EMAIL;
+
+    if (!resendKey || !fromEmail) {
+      await supabase.from("followups").update({
+        status: "failed",
+        error: "Resend is not configured",
+        updated_at: new Date().toISOString(),
+      }).eq("id", followup.id);
+      followupStatus = "failed";
+    } else {
+      const resend = new Resend(resendKey);
+      const result = await resend.emails.send({
+        from: `${profile.full_name} via Biz Card <${fromEmail}>`,
+        to: email,
+        replyTo: profile.email,
+        subject,
+        text,
+        scheduledAt,
+      });
+
+      if (result.error || !result.data?.id) {
+        console.error("resend schedule failed", result.error);
+        await supabase.from("followups").update({
+          status: "failed",
+          error: result.error?.message?.slice(0, 1000) || "Unknown Resend scheduling error",
+          updated_at: new Date().toISOString(),
+        }).eq("id", followup.id);
+        followupStatus = "failed";
+      } else {
+        await supabase.from("followups").update({
+          provider_message_id: result.data.id,
+          error: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", followup.id);
+        followupStatus = "scheduled";
+      }
+    }
   }
 
-  return NextResponse.json({ ok: true, scheduled_at: scheduledAt }, { status: 201 });
+  return NextResponse.json({
+    ok: true,
+    scheduled_at: scheduledAt,
+    followup_status: followupStatus,
+  }, { status: 201 });
 }
