@@ -1,73 +1,82 @@
 # Biz Card
 
-Biz Card is a mobile-first contact exchange and automated follow-up product.
+Biz Card is a mobile-first contact exchange and automatic follow-up product.
 
-The core loop is intentionally simple:
+## Pilot flow
 
-1. The card owner chooses an active mode such as Everyday or Event.
-2. A new contact scans the owner's permanent QR code.
-3. The contact shares their name, email, and optional phone number.
-4. The contact downloads the owner's `.vcf` and adds it to their phone.
-5. The system snapshots the active mode and schedules the matching follow-up.
-6. A server-side worker sends the follow-up automatically.
+1. Card owner signs in with an email magic link.
+2. One-time onboarding creates their public card plus Everyday and Event modes.
+3. Owner chooses the active mode and shows one permanent QR code.
+4. A new contact scans, shares name/email/phone, and consents to one follow-up.
+5. The contact downloads the owner's `.vcf` and saves it with the native phone contact flow.
+6. Biz Card snapshots the active mode, stores the connection, and schedules the personalized follow-up directly with Resend.
+7. Resend webhooks update the follow-up status in the owner's Connections list.
 
 ## Stack
 
 - Next.js + TypeScript
-- Supabase for profiles, modes, connections, and follow-up state
-- Resend for email delivery
+- Supabase Auth + Postgres
+- Resend scheduled email + webhooks
 - Vercel-compatible deployment
-
-## Current V1 foundation
-
-- Mobile owner dashboard with QR code
-- Everyday/Event mode UX
-- Public `/[slug]` contact-swap page
-- Consent capture
-- Dynamic native `.vcf` endpoint at `/api/vcard/[slug]`
-- Connection API that snapshots the active mode
-- Scheduled follow-up records
-- Protected follow-up email worker
-- Initial Supabase migration and row-level security policies
-- Demo fallback so the front end can be previewed before credentials are configured
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and configure:
-
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 RESEND_API_KEY=
+RESEND_WEBHOOK_SECRET=
 FOLLOWUP_FROM_EMAIL=
-CRON_SECRET=
+NEXT_PUBLIC_APP_URL=
 ```
 
-`FOLLOWUP_FROM_EMAIL` must be an address/domain verified with the email provider. Follow-ups use the card owner's actual email as the Reply-To address.
+`FOLLOWUP_FROM_EMAIL` must be on a domain verified in Resend. Messages use the card owner's email as `Reply-To` so replies go directly to the person who made the connection.
 
-## Database
+## Supabase
 
-Run:
+Run these migrations in order:
 
-`supabase/migrations/0001_initial_schema.sql`
+```text
+supabase/migrations/0001_initial_schema.sql
+supabase/migrations/0002_owner_onboarding.sql
+```
 
-The public contact exchange writes through server-side APIs using the service-role key. The service-role key must never be exposed to the browser.
+Enable email auth in Supabase. Add the deployed site URL as an allowed auth redirect URL so magic-link sign in returns to the app.
 
-## Follow-up worker
+## Resend
 
-`POST /api/cron/send-followups`
+The app schedules each follow-up with Resend as soon as the contact swap is submitted. This means there is no polling job or cron worker to maintain.
 
-Send:
+Create a webhook pointing to:
 
-`Authorization: Bearer <CRON_SECRET>`
+```text
+https://YOUR_DOMAIN/api/webhooks/resend
+```
 
-A scheduler will call this endpoint on a short interval in production.
+Subscribe to at least `email.sent`, `email.delivered`, and `email.bounced`, then put the webhook signing secret in `RESEND_WEBHOOK_SECRET`.
 
-## Next build slice
+For the pilot, follow-up delays are limited to 72 hours because the scheduled-email API is the simplest reliable way to support per-user messages, per-mode timing, and future cancellation without another scheduler.
 
-- Supabase Auth and onboarding
-- Persist owner profile and active mode
-- Mode/template editor
-- Real connections dashboard
-- Cancel/reschedule follow-up controls
-- Deployment and end-to-end iPhone contact-save test
+## What the tester can do
+
+- Sign in without a password
+- Create their own card
+- Set name/company/title/email/phone/website
+- Toggle Everyday vs Event mode
+- Rename the Event mode for a specific conference
+- Edit subject, message, and delay
+- Pause automatic follow-up
+- Show a permanent QR code
+- Receive real contact submissions
+- Let the other person save a native `.vcf`
+- See recent connections and follow-up status
+
+## Before inviting the first tester
+
+- Apply both Supabase migrations
+- Configure the Supabase auth redirect URL
+- Verify the sending domain in Resend
+- Add all environment variables in Vercel
+- Register the Resend webhook
+- Perform one end-to-end iPhone test using a real email address
