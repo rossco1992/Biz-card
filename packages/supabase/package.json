@@ -1,0 +1,13 @@
+{
+  "name": "@biz-card/supabase",
+  "version": "0.2.0",
+  "private": true,
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@biz-card/types": "*",
+    "@supabase/supabase-js": "^2.57.4"
+  }
+}

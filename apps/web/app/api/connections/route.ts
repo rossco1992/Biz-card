@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { mergeTemplate } from "@biz-card/core";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 function clean(value: unknown, max = 200) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
-function merge(template: string, values: Record<string, string>) {
-  return Object.entries(values).reduce(
-    (result, [key, value]) => result.replaceAll(`{{${key}}}`, value),
-    template,
-  );
 }
 
 export async function POST(request: Request) {
@@ -81,8 +75,8 @@ export async function POST(request: Request) {
       last_name: lastName,
       full_name: [firstName, lastName].filter(Boolean).join(" "),
     };
-    const subject = merge(mode.subject_template, values);
-    const text = merge(mode.body_template, values);
+    const subject = mergeTemplate(mode.subject_template, values);
+    const text = mergeTemplate(mode.body_template, values);
 
     const { data: followup, error: followupError } = await supabase
       .from("followups")
