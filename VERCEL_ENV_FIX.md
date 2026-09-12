@@ -1,0 +1,1 @@
+This branch maps the Supabase integration variables provided by Vercel (`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`) into the `NEXT_PUBLIC_*` variables consumed by the browser bundle. It also includes a safe `/api/env-check` endpoint that reports only whether expected variables are present, never their values.
