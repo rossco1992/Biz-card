@@ -1,0 +1,9 @@
+{
+  "name": "@biz-card/types",
+  "version": "0.2.0",
+  "private": true,
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

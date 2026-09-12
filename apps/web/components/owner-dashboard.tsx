@@ -3,54 +3,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { Session } from "@supabase/supabase-js";
+import { defaultModes, slugify } from "@biz-card/core";
+import type { Connection, Mode, Profile } from "@biz-card/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-
-type Profile = {
-  id: string;
-  user_id: string;
-  slug: string;
-  full_name: string;
-  company: string;
-  title: string;
-  email: string;
-  phone: string | null;
-  website: string | null;
-  followup_enabled: boolean;
-  active_mode_id: string | null;
-};
-
-type Mode = {
-  id: string;
-  profile_id: string;
-  name: string;
-  kind: "everyday" | "event";
-  delay_hours: number;
-  subject_template: string;
-  body_template: string;
-};
-
-type Connection = {
-  id: string;
-  first_name: string;
-  last_name: string | null;
-  email: string;
-  mode_name_snapshot: string | null;
-  created_at: string;
-  followups?: Array<{
-    status: string;
-    send_at: string;
-    sent_at: string | null;
-  }>;
-};
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-}
 
 function formatWhen(value: string) {
   const date = new Date(value);
@@ -222,28 +177,9 @@ export function OwnerDashboard() {
       return;
     }
 
-    const defaults = [
-      {
-        profile_id: insertedProfile.id,
-        name: "Everyday",
-        kind: "everyday",
-        delay_hours: 24,
-        subject_template: "Great meeting you",
-        body_template: "Hey {{first_name}} — great meeting you. Wanted to follow up while our conversation was still fresh. If it'd be useful to keep talking, happy to find some time.",
-      },
-      {
-        profile_id: insertedProfile.id,
-        name: "Event",
-        kind: "event",
-        delay_hours: 48,
-        subject_template: "Great meeting you at the event",
-        body_template: "Hey {{first_name}} — it was great meeting you at the event. I wanted to follow up while our conversation was still fresh. If you'd like to keep talking, happy to find some time.",
-      },
-    ];
-
     const { data: insertedModes, error: insertModeError } = await supabase
       .from("modes")
-      .insert(defaults)
+      .insert(defaultModes(insertedProfile.id))
       .select("id,kind");
 
     if (insertModeError || !insertedModes) {

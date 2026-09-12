@@ -1,25 +1,99 @@
 # Biz Card
 
-Biz Card is a mobile-first contact exchange and automatic follow-up product.
+Biz Card is a native-first contact exchange and automatic follow-up product. Card owners use the Expo app on iOS or Android. People scanning a card land on a fast public web page and do not need an account or app.
 
-## Pilot flow
+## Product surfaces
 
-1. Card owner signs in with an email magic link.
-2. One-time onboarding creates their public card plus Everyday and Event modes.
-3. Owner chooses the active mode and shows one permanent QR code.
-4. A new contact scans, shares name/email/phone, and consents to one follow-up.
-5. The contact downloads the owner's `.vcf` and saves it with the native phone contact flow.
-6. Biz Card snapshots the active mode, stores the connection, and schedules the personalized follow-up directly with Resend.
-7. Resend webhooks update the follow-up status in the owner's Connections list.
+- **Native app (`apps/mobile`)** — owner sign-in, onboarding, QR card, mode switching, connections, automations, and settings.
+- **Web app (`apps/web`)** — web admin fallback, public card pages, contact capture, vCard downloads, and server-side Resend integration.
+- **Shared packages (`packages/*`)** — Supabase schema types, client/query helpers, and product logic used by both clients.
 
-## Stack
+```text
+apps/
+  mobile/       Expo + React Native + Expo Router
+  web/          Next.js admin, public pages, and API routes
+packages/
+  core/         URLs, slugs, templates, and shared defaults
+  supabase/     Typed Supabase client and owner workspace query
+  types/        Database and product contracts
+supabase/
+  migrations/   Existing database schema and owner policies
+```
 
-- Next.js + TypeScript
-- Supabase Auth + Postgres
-- Resend scheduled email + webhooks
-- Vercel-compatible deployment
+## What works in the native first pass
 
-## Environment
+- Passwordless email authentication with mobile deep-link return
+- Three-step first-run card setup
+- Permanent QR pointing to the existing public web card
+- Native share sheet and in-app card preview
+- Fast active-mode switching
+- Searchable, refreshable connections with delivery status
+- Enable/pause automatic follow-ups
+- Create and edit unlimited follow-up modes
+- Profile editing and sign-out
+- Loading, empty, success, and error states
+
+The existing public contact form, `.vcf` download, Supabase storage, Resend scheduling, and Resend webhook status updates remain in the web app.
+
+## Prerequisites
+
+- Node.js 20 or newer
+- npm 10 or newer
+- A Supabase project with the migrations in `supabase/migrations` applied
+- Resend and Vercel for production web follow-ups
+- Xcode for the iOS simulator or Android Studio for the Android emulator
+
+## Install
+
+From the repository root:
+
+```bash
+npm install
+```
+
+The root is an npm workspace. Do not install dependencies separately in each app.
+
+## Native app setup
+
+Create `apps/mobile/.env.local`:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_OR_PUBLISHABLE_KEY
+EXPO_PUBLIC_WEB_URL=https://bizcard-nu.vercel.app
+```
+
+Start the app:
+
+```bash
+npm run dev:mobile
+npm run ios
+npm run android
+```
+
+For production-like authentication, use an Expo development build. Add this redirect to the Supabase Auth URL allow list:
+
+```text
+bizcard://auth/callback
+```
+
+The app uses PKCE, stores its session in native async storage, refreshes credentials while active, and handles both cold-start and already-open deep links.
+
+### EAS / TestFlight
+
+`apps/mobile/eas.json` includes development, internal preview, and production profiles. Before the first store build, replace the placeholder iOS bundle identifier and Android package in `apps/mobile/app.json` if those identifiers are not available, then run:
+
+```bash
+cd apps/mobile
+npx eas-cli build --platform ios --profile production
+npx eas-cli submit --platform ios --profile production
+```
+
+Configure the three `EXPO_PUBLIC_*` values as EAS environment variables for preview and production builds.
+
+## Web app setup
+
+Create `apps/web/.env.local` (or configure the same values in Vercel):
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
@@ -31,52 +105,40 @@ FOLLOWUP_FROM_EMAIL=
 NEXT_PUBLIC_APP_URL=
 ```
 
-`FOLLOWUP_FROM_EMAIL` must be on a domain verified in Resend. Messages use the card owner's email as `Reply-To` so replies go directly to the person who made the connection.
+`FOLLOWUP_FROM_EMAIL` must use a domain verified in Resend. Replies use the card owner's email as `Reply-To`.
 
-## Supabase
+Run the web app:
 
-Run these migrations in order:
+```bash
+npm run dev:web
+```
+
+The root `vercel.json` keeps the existing Vercel project building the Next.js workspace and serving `apps/web/.next`.
+
+## Supabase and Resend
+
+Apply the migrations in order:
 
 ```text
 supabase/migrations/0001_initial_schema.sql
 supabase/migrations/0002_owner_onboarding.sql
 ```
 
-Enable email auth in Supabase. Add the deployed site URL as an allowed auth redirect URL so magic-link sign in returns to the app.
+Enable email auth. Add both the deployed web URL and `bizcard://auth/callback` to allowed auth redirects.
 
-## Resend
-
-The app schedules each follow-up with Resend as soon as the contact swap is submitted. This means there is no polling job or cron worker to maintain.
-
-Create a webhook pointing to:
+Point the Resend webhook at:
 
 ```text
 https://YOUR_DOMAIN/api/webhooks/resend
 ```
 
-Subscribe to at least `email.sent`, `email.delivered`, and `email.bounced`, then put the webhook signing secret in `RESEND_WEBHOOK_SECRET`.
+Subscribe to `email.sent`, `email.delivered`, and `email.bounced`. Follow-up delays are capped at 72 hours to match the current direct Resend scheduling approach.
 
-For the pilot, follow-up delays are limited to 72 hours because the scheduled-email API is the simplest reliable way to support per-user messages, per-mode timing, and future cancellation without another scheduler.
+## Checks
 
-## What the tester can do
+```bash
+npm run typecheck
+npm run build
+```
 
-- Sign in without a password
-- Create their own card
-- Set name/company/title/email/phone/website
-- Toggle Everyday vs Event mode
-- Rename the Event mode for a specific conference
-- Edit subject, message, and delay
-- Pause automatic follow-up
-- Show a permanent QR code
-- Receive real contact submissions
-- Let the other person save a native `.vcf`
-- See recent connections and follow-up status
-
-## Before inviting the first tester
-
-- Apply both Supabase migrations
-- Configure the Supabase auth redirect URL
-- Verify the sending domain in Resend
-- Add all environment variables in Vercel
-- Register the Resend webhook
-- Perform one end-to-end iPhone test using a real email address
+Before inviting testers, complete one real-device flow: sign in, create a card, switch modes, scan the QR from a second phone, submit contact details, save the vCard, and confirm the scheduled follow-up appears in Connections.

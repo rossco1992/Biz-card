@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBizCardClient, type BizCardSupabaseClient } from "@biz-card/supabase";
 
-let client: SupabaseClient | null | undefined;
+let client: BizCardSupabaseClient | null | undefined;
 
 export function getSupabaseBrowserClient() {
   if (client !== undefined) return client;
@@ -15,7 +15,7 @@ export function getSupabaseBrowserClient() {
     return client;
   }
 
-  client = createClient(url, anonKey, {
+  client = createBizCardClient(url, anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
