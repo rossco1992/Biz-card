@@ -1,29 +1,41 @@
 import { Redirect } from "expo-router";
-import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Keyboard, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Notice, Screen } from "@/components/ui";
+import { getSignInErrorMessage, isValidEmail } from "@/lib/sign-in";
 import { colors } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function SignIn() {
-  const { session, sendMagicLink } = useSession();
+  const { session, sendMagicLink, configured, loading } = useSession();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const submitting = useRef(false);
+  const validEmail = isValidEmail(email);
+
   if (session) return <Redirect href="/" />;
 
   async function submit() {
-    setBusy(true);
+    Keyboard.dismiss();
+    if (submitting.current || loading || !configured) return;
     setError("");
     setMessage("");
+    if (!validEmail) {
+      setError("Enter a valid email address, like you@company.com.");
+      return;
+    }
+    submitting.current = true;
+    setBusy(true);
     try {
-      await sendMagicLink(email);
-      setMessage("Check your inbox, then tap the sign-in link to return here.");
+      await sendMagicLink(email.trim());
+      setMessage("Check your inbox and spam folder, then tap the sign-in link to return here.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "We couldn't send the sign-in link.");
+      setError(getSignInErrorMessage(cause));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -36,8 +48,28 @@ export default function SignIn() {
         <Text style={styles.copy}>Swap details in seconds and keep every promising introduction moving.</Text>
       </View>
       <Card>
-        <Field label="Work email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="you@company.com" />
-        <Button onPress={() => void submit()} loading={busy} disabled={!email.trim()}>Email me a sign-in link</Button>
+        <Field
+          label="Work email"
+          value={email}
+          onChangeText={(value) => {
+            setEmail(value);
+            setError("");
+            setMessage("");
+          }}
+          onBlur={() => {
+            if (email.trim() && !validEmail) setError("Enter a valid email address, like you@company.com.");
+          }}
+          editable={!busy && !loading && configured}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          returnKeyType="send"
+          onSubmitEditing={() => void submit()}
+          placeholder="you@company.com"
+        />
+        <Button onPress={() => void submit()} loading={busy} disabled={busy || loading || !configured || !validEmail}>Email me a sign-in link</Button>
+        {!configured ? <Notice tone="error">Sign-in is temporarily unavailable. Please try again later.</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
         <Text style={styles.finePrint}>No password to remember. The link securely signs you into this device.</Text>
