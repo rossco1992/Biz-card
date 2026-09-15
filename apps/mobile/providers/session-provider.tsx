@@ -133,6 +133,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
       if (!supabase) throw new Error("Supabase is not configured.");
       setError("");
       const redirectTo = Linking.createURL("auth/callback");
+      if (__DEV__) {
+        console.log("Sign-in redirect:", redirectTo);
+      }
       const { error: authError } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: redirectTo } });
       if (authError) throw authError;
     },
