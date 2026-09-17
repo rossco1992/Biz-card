@@ -10,6 +10,10 @@ export function getSignInErrorMessage(cause: unknown): string {
   const code = typeof error.code === "string" ? error.code : "";
   const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
 
+  if (code === "native_build_required") {
+    return "Open the installed Biz Card app to sign in. Email links cannot return to this Expo Go preview.";
+  }
+
   // Older Auth responses may omit codes or wrap rate limits in delivery errors.
   if (["over_email_send_rate_limit", "over_request_rate_limit"].includes(code)
     || error.status === 429 || /rate.?limit|too many requests|too many emails|for security purposes.*seconds/.test(message)) {
