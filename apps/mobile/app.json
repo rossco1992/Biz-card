@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bizcard.mobile"
+      "bundleIdentifier": "com.bizcard.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.bizcard.mobile",
@@ -39,6 +42,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "71ffaec9-ff46-453e-b978-6493b29fb365"
+      }
+    },
+    "owner": "rossco1992"
   }
 }

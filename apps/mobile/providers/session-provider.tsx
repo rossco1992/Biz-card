@@ -3,8 +3,10 @@ import { loadOwnerWorkspace } from "@biz-card/supabase";
 import type { Connection, Mode, Profile } from "@biz-card/types";
 import type { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import { completeAuthCallback, INVALID_LINK_MESSAGE, MOBILE_AUTH_REDIRECT } from "@/lib/auth-callback";
 import { AppState } from "react-native";
-import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type ProfileInput = Pick<Profile, "slug" | "full_name" | "company" | "title" | "email" | "phone" | "website">;
@@ -18,6 +20,8 @@ type SessionContextValue = {
   connections: Connection[];
   loading: boolean;
   refreshing: boolean;
+  authCompleting: boolean;
+  authError: string;
   error: string;
   clearError: () => void;
   sendMagicLink: (email: string) => Promise<void>;
@@ -32,16 +36,6 @@ type SessionContextValue = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-function getAuthParams(url: string) {
-  const normalized = url.replace("#", "?");
-  const parsed = new URL(normalized);
-  return {
-    code: parsed.searchParams.get("code"),
-    accessToken: parsed.searchParams.get("access_token"),
-    refreshToken: parsed.searchParams.get("refresh_token"),
-  };
-}
-
 export function SessionProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -50,6 +44,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authCompleting, setAuthCompleting] = useState(false);
+  const lastAuthUrl = useRef<string | null>(null);
+  const authInFlight = useRef(false);
 
   const hydrate = useCallback(async (userId: string, silent = false) => {
     if (!supabase) return;
@@ -68,17 +66,24 @@ export function SessionProvider({ children }: PropsWithChildren) {
   }, []);
 
   const handleAuthUrl = useCallback(async (url: string) => {
-    if (!supabase) return;
+    if (!supabase || !url.startsWith(MOBILE_AUTH_REDIRECT) || lastAuthUrl.current === url || authInFlight.current) return;
+    lastAuthUrl.current = url;
+    authInFlight.current = true;
+    setAuthCompleting(true);
+    setAuthError("");
     try {
-      const { code, accessToken, refreshToken } = getAuthParams(url);
-      if (code) await supabase.auth.exchangeCodeForSession(code);
-      else if (accessToken && refreshToken) {
-        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      const nextSession = await completeAuthCallback(url, supabase.auth);
+      if (nextSession) {
+        setSession(nextSession);
+        await hydrate(nextSession.user.id);
       }
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That sign-in link could not be completed.");
+    } catch {
+      setAuthError(INVALID_LINK_MESSAGE);
+    } finally {
+      authInFlight.current = false;
+      setAuthCompleting(false);
     }
-  }, []);
+  }, [hydrate]);
 
   useEffect(() => {
     const client = supabase;
@@ -88,18 +93,27 @@ export function SessionProvider({ children }: PropsWithChildren) {
     }
 
     let mounted = true;
-    client.auth.getSession().then(async ({ data }) => {
+    client.auth.getSession().then(async ({ data, error: sessionError }) => {
       if (!mounted) return;
+      if (authInFlight.current) return;
+      if (sessionError) setError("Your session could not be restored. Please sign in again.");
       setSession(data.session);
       if (data.session) await hydrate(data.session.user.id, true);
+    }).catch(() => {
+      if (mounted) setError("Your session could not be restored. Please sign in again.");
+    }).finally(() => {
       if (mounted) setLoading(false);
     });
 
-    Linking.getInitialURL().then((url) => url && void handleAuthUrl(url));
+    Linking.getInitialURL().then((url) => url && void handleAuthUrl(url)).catch(() => {
+      if (mounted) setAuthError("The sign-in link could not be opened. Please try again.");
+    });
     const linkSubscription = Linking.addEventListener("url", ({ url }) => void handleAuthUrl(url));
     const authSubscription = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (nextSession) void hydrate(nextSession.user.id, true);
+      if (nextSession) {
+        if (!authInFlight.current) void hydrate(nextSession.user.id);
+      }
       else {
         setProfile(null);
         setModes([]);
@@ -127,12 +141,18 @@ export function SessionProvider({ children }: PropsWithChildren) {
     connections,
     loading,
     refreshing,
+    authCompleting,
+    authError,
     error,
     clearError: () => setError(""),
     sendMagicLink: async (email) => {
       if (!supabase) throw new Error("Supabase is not configured.");
+      if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+        throw Object.assign(new Error("Use the installed Biz Card prototype to sign in."), { code: "native_build_required" });
+      }
       setError("");
-      const redirectTo = Linking.createURL("auth/callback");
+      setAuthError("");
+      const redirectTo = MOBILE_AUTH_REDIRECT;
       if (__DEV__) {
         console.log("Sign-in redirect:", redirectTo);
       }
@@ -199,7 +219,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       }
       await hydrate(session.user.id);
     },
-  }), [connections, error, hydrate, loading, modes, profile, refreshing, session]);
+  }), [authCompleting, authError, connections, error, hydrate, loading, modes, profile, refreshing, session]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
