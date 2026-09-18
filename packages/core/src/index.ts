@@ -1,5 +1,13 @@
 export const DEFAULT_WEB_URL = "https://bizcard-nu.vercel.app";
 
+/** Unique connection_id makes this a to-one join; tolerate older array payloads. */
+export function getConnectionFollowup<T extends object>(
+  connection: { followups?: T | T[] | null },
+): T | undefined {
+  const value = connection.followups;
+  return Array.isArray(value) ? value[0] : value ?? undefined;
+}
+
 export function slugify(value: string) {
   return value
     .toLowerCase()

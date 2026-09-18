@@ -57,7 +57,9 @@ export type Connection = {
   consent_at: string;
   mode_name_snapshot: string | null;
   created_at: string;
-  followups?: Pick<Followup, "status" | "send_at" | "sent_at" | "error">[];
+  followups?: Pick<Followup, "status" | "send_at" | "sent_at" | "error">
+    | Pick<Followup, "status" | "send_at" | "sent_at" | "error">[]
+    | null;
 };
 
 type Relationship<ForeignKey extends string, Column extends string, ReferencedRelation extends string> = {

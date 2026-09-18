@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { Session } from "@supabase/supabase-js";
-import { defaultModes, slugify } from "@biz-card/core";
+import { defaultModes, getConnectionFollowup, slugify } from "@biz-card/core";
 import type { Connection, Mode, Profile } from "@biz-card/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
@@ -369,7 +369,7 @@ export function OwnerDashboard() {
         <div className="miniLabel">Recent connections</div>
         {connections.length === 0 && <div className="helper" style={{ textAlign: "left", padding: "12px 0" }}>No scans yet. Your first connection will show up here.</div>}
         {connections.map((connection) => {
-          const followup = connection.followups?.[0];
+          const followup = getConnectionFollowup(connection);
           const name = [connection.first_name, connection.last_name].filter(Boolean).join(" ");
           const status = followup?.status === "sent"
             ? "✓ Sent"

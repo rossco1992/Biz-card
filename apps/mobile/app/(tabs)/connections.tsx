@@ -1,4 +1,4 @@
-import { connectionName } from "@biz-card/core";
+import { connectionName, getConnectionFollowup } from "@biz-card/core";
 import type { Connection } from "@biz-card/types";
 import { useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
@@ -11,7 +11,7 @@ function when(value: string) {
 }
 
 function statusFor(connection: Connection) {
-  const followup = connection.followups?.[0];
+  const followup = getConnectionFollowup(connection);
   if (!followup) return { label: "No follow-up", tone: "neutral" };
   if (followup.status === "sent") return { label: "Sent", tone: "success" };
   if (followup.status === "failed") return { label: "Needs attention", tone: "danger" };

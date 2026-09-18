@@ -24,5 +24,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Follow-up display regression tests
+        run: node --experimental-strip-types --test packages/core/tests/followup.test.mjs
+
       - name: Build
         run: npm run build
