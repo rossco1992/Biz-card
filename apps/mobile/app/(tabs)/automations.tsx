@@ -1,15 +1,49 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { DEFAULT_WEB_URL } from "@biz-card/core";
+import { supabase } from "@/lib/supabase";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Button, Card, Notice, PageHeader, Screen, uiStyles } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function AutomationsScreen() {
-  const { profile, modes, toggleFollowups } = useSession();
+  const { profile, modes, session, toggleFollowups } = useSession();
+  const [testing, setTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
+  const testInFlight = useRef(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   if (!profile) return null;
+  const activeMode = modes.find((mode) => mode.id === profile.active_mode_id);
+
+  async function sendTest() {
+    if (!supabase || !activeMode || testInFlight.current) return;
+    testInFlight.current = true;
+    setTesting(true); setError(""); setTestMessage("");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const { data, error: authError } = await supabase.auth.getSession();
+      if (authError || !data.session) throw new Error("Sign in again to send a test.");
+      const base = (process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).replace(/\/$/, "");
+      const response = await fetch(`${base}/api/test-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+        body: JSON.stringify({ mode_id: activeMode.id }),
+        signal: controller.signal,
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) throw new Error(result?.error || "Test email is unavailable. Deploy the latest web version first.");
+      setTestMessage(`Resend accepted the test for ${result.recipient}. Check your inbox and spam folder. Existing schedules are unchanged.`);
+    } catch (cause) {
+      setError(cause instanceof Error && cause.name === "AbortError"
+        ? "The request timed out; it may still have sent. Check your inbox before retrying."
+        : cause instanceof Error ? cause.message : "Could not send the test email.");
+    } finally {
+      clearTimeout(timeout); testInFlight.current = false; setTesting(false);
+    }
+  }
 
   async function toggle() {
     setBusy(true);
@@ -29,6 +63,12 @@ export default function AutomationsScreen() {
         </View>
       </Card>
       <View style={uiStyles.between}><Text style={uiStyles.sectionTitle}>Your modes</Text><Text style={styles.count}>{modes.length}</Text></View>
+      <Card>
+        <Text style={uiStyles.sectionTitle}>Temporary email test</Text>
+        <Text style={uiStyles.small}>Send the saved {activeMode?.name ?? "active mode"} message immediately to {session?.user.email ?? "your signed-in email"}. No connections or schedules are changed.</Text>
+        <Button variant="secondary" onPress={() => void sendTest()} loading={testing} disabled={!activeMode || !session?.user.email}>Send test email</Button>
+        {testMessage ? <Notice tone="success">{testMessage}</Notice> : null}
+      </Card>
       <View style={styles.modeList}>
         {modes.map((mode) => {
           const active = profile.active_mode_id === mode.id;
