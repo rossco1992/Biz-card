@@ -1,8 +1,8 @@
 import { connectionName, getConnectionFollowup } from "@biz-card/core";
 import type { Connection } from "@biz-card/types";
 import { useMemo, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
-import { EmptyState, Notice, PageHeader } from "@/components/ui";
+import { FlatList, Platform, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { EmptyState, KeyboardFrame, Notice, PageHeader } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
@@ -29,8 +29,12 @@ export default function ConnectionsScreen() {
   }, [connections, query]);
 
   return (
-    <View style={styles.screen}>
+    <KeyboardFrame>
       <FlatList
+        style={styles.screen}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={false}
         data={filtered}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.accent} />}
@@ -53,7 +57,7 @@ export default function ConnectionsScreen() {
         }}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
-    </View>
+    </KeyboardFrame>
   );
 }
 

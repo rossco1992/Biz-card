@@ -14,6 +14,7 @@ export default function TabLayout() {
       initialRouteName="my-card"
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: "#89928D",
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginBottom: 3 },

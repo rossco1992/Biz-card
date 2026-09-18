@@ -1,6 +1,9 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import { useEffect, useState, type PropsWithChildren, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,12 +16,36 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radii } from "@/constants/theme";
 
+/** One keyboard layout for forms and lists, including modal screens. */
+export function KeyboardFrame({ children }: PropsWithChildren) {
+  const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
+  useEffect(() => {
+    const shown = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
+    const hidden = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
+  return (
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+        {children}
+        {keyboardVisible ? (
+          <View style={styles.keyboardToolbar}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Dismiss keyboard" onPress={Keyboard.dismiss} style={styles.keyboardDone}>
+              <Text style={styles.keyboardDoneText}>Done</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </SafeAreaView>
+    </KeyboardAvoidingView>
+  );
+}
+
 export function Screen({ children, scroll = true }: PropsWithChildren<{ scroll?: boolean }>) {
   const content = <View style={styles.screenContent}>{children}</View>;
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      {scroll ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>{content}</ScrollView> : content}
-    </SafeAreaView>
+    <KeyboardFrame>
+      {scroll ? <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"} automaticallyAdjustKeyboardInsets={false} contentContainerStyle={styles.scroll}>{content}</ScrollView> : content}
+    </KeyboardFrame>
   );
 }
 
@@ -49,7 +76,7 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       disabled={disabled || loading}
-      onPress={onPress}
+      onPress={() => { Keyboard.dismiss(); onPress?.(); }}
       style={({ pressed }) => [styles.button, styles[`${variant}Button`], (pressed || disabled || loading) && styles.buttonPressed]}
     >
       {loading ? <ActivityIndicator color={variant === "primary" ? "white" : colors.ink} /> : <Text style={[styles.buttonText, variant === "primary" && styles.primaryButtonText, variant === "danger" && styles.dangerButtonText]}>{children}</Text>}
@@ -63,6 +90,8 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
       <Text style={styles.label}>{label}</Text>
       <TextInput
         placeholderTextColor="#9AA19D"
+        returnKeyType={props.multiline ? "default" : "done"}
+        submitBehavior={props.multiline ? "newline" : "blurAndSubmit"}
         {...props}
         style={[styles.input, props.multiline && styles.multiline, props.style]}
       />
@@ -100,6 +129,10 @@ export const uiStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  keyboardToolbar: { flexDirection: "row", justifyContent: "flex-end", backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line },
+  keyboardDone: { minHeight: 44, minWidth: 72, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  keyboardDoneText: { color: colors.accent, fontSize: 16, fontWeight: "700" },
   safeArea: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1 },
   screenContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 120, gap: 18 },
