@@ -25,7 +25,7 @@ jobs:
         run: npm run typecheck
 
       - name: Test-email endpoint tests
-        run: node --experimental-strip-types --test apps/web/tests/test-email.test.mjs
+        run: node --experimental-strip-types --test apps/web/tests/test-email*.test.mjs
 
       - name: Keyboard wiring regression tests
         run: node --test apps/mobile/tests/keyboard.test.mjs
