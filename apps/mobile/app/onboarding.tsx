@@ -1,7 +1,7 @@
 import { slugify } from "@biz-card/core";
 import { Redirect, router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Notice, Screen, uiStyles } from "@/components/ui";
 import { colors } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
@@ -19,6 +19,11 @@ export default function Onboarding() {
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
   const suggestedSlug = useMemo(() => slugify(slug || fullName), [fullName, slug]);
+
+  function changeStep(next: number) {
+    Keyboard.dismiss();
+    setStep(next);
+  }
 
   if (!session) return <Redirect href="/sign-in" />;
   if (profile) return <Redirect href="/" />;
@@ -38,7 +43,7 @@ export default function Onboarding() {
   }
 
   return (
-    <Screen>
+    <Screen key={step}>
       <View style={styles.progressRow}>{[0, 1, 2].map((item) => <View key={item} style={[styles.progress, item <= step && styles.progressActive]} />)}</View>
       <Text style={styles.stepLabel}>Step {step + 1} of 3</Text>
       {step === 0 ? (
@@ -49,7 +54,7 @@ export default function Onboarding() {
             <Field label="Full name" value={fullName} onChangeText={(value) => { setFullName(value); if (!slug) setSlug(slugify(value)); }} autoComplete="name" />
             <Field label="Company" value={company} onChangeText={setCompany} />
             <Field label="Title" value={title} onChangeText={setTitle} />
-            <Button onPress={() => setStep(1)} disabled={!fullName.trim()}>Continue</Button>
+            <Button onPress={() => changeStep(1)} disabled={!fullName.trim()}>Continue</Button>
           </Card>
         </>
       ) : step === 1 ? (
@@ -60,8 +65,8 @@ export default function Onboarding() {
             <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             <Field label="Phone (optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <Field label="Website (optional)" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="https://" />
-            <Button onPress={() => setStep(2)} disabled={!email.trim()}>Continue</Button>
-            <Pressable onPress={() => setStep(0)}><Text style={styles.back}>Back</Text></Pressable>
+            <Button onPress={() => changeStep(2)} disabled={!email.trim()}>Continue</Button>
+            <Pressable onPress={() => changeStep(0)}><Text style={styles.back}>Back</Text></Pressable>
           </Card>
         </>
       ) : (
@@ -73,7 +78,7 @@ export default function Onboarding() {
             <View style={styles.urlPreview}><Text style={styles.urlMuted}>bizcard-nu.vercel.app/</Text><Text style={styles.urlStrong}>{suggestedSlug || "your-name"}</Text></View>
             {error ? <Notice tone="error">{error}</Notice> : null}
             <Button onPress={() => void finish()} loading={busy} disabled={!suggestedSlug}>Create my card</Button>
-            <Pressable onPress={() => setStep(1)}><Text style={styles.back}>Back</Text></Pressable>
+            <Pressable onPress={() => changeStep(1)}><Text style={styles.back}>Back</Text></Pressable>
           </Card>
         </>
       )}

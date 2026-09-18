@@ -15,6 +15,7 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.bizcard.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
