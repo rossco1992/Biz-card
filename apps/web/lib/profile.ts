@@ -10,7 +10,7 @@ export async function getPublicProfile(slug: string) {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id,slug,full_name,company,title,email,phone,website,followup_enabled,active_mode_id")
+    .select("id,slug,avatar_url,full_name,company,title,email,phone,website,followup_enabled,active_mode_id")
     .eq("slug", slug)
     .maybeSingle();
 

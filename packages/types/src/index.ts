@@ -33,6 +33,7 @@ export type Profile = {
   id: string;
   user_id: string;
   slug: string;
+  avatar_url?: string | null;
   full_name: string;
   company: string;
   title: string;

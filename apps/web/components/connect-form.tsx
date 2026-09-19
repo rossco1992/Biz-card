@@ -1,8 +1,10 @@
 "use client";
 
+import { ProfilePhoto } from "./profile-photo";
 import { FormEvent, useState } from "react";
 
 type Profile = {
+  avatar_url?: string | null;
   slug: string;
   full_name: string;
   company: string;
@@ -60,7 +62,7 @@ export function ConnectForm({ profile }: { profile: Profile }) {
 
         <section className="card sectionGap stack">
           <div className="contactCard">
-            <div className="profileMark">{profile.full_name.split(" ").map((part) => part[0]).slice(0,2).join("")}</div>
+            <ProfilePhoto name={profile.full_name} url={profile.avatar_url} />
             <div>
               <div className="profileName">{profile.full_name}</div>
               <div className="profileMeta">{profile.title} · {profile.company}</div>
