@@ -1,0 +1,26 @@
+name: Send due follow-ups
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: send-followups
+  cancel-in-progress: false
+jobs:
+  send:
+    if: ${{ vars.MAILBOX_SCHEDULER_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Process due messages
+        env:
+          APP_URL: ${{ vars.MAILBOX_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$APP_URL" && test -n "$CRON_SECRET"
+          case "$APP_URL" in https://*) ;; *) exit 1 ;; esac
+          # Never retry an ambiguous send automatically.
+          curl --fail-with-body --silent --show-error --max-time 65 \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/jobs/followups"
