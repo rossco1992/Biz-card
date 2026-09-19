@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ConnectedEmail } from "@/components/connected-email";
 import { QRCodeSVG } from "qrcode.react";
 import type { Session } from "@supabase/supabase-js";
 import { defaultModes, getConnectionFollowup, slugify } from "@biz-card/core";
@@ -59,7 +60,7 @@ export function OwnerDashboard() {
         .order("created_at", { ascending: true }),
       supabase
         .from("connections")
-        .select("id,first_name,last_name,email,mode_name_snapshot,created_at,followups(status,send_at,sent_at)")
+        .select("id,first_name,last_name,email,mode_name_snapshot,created_at,followups(status,send_at,sent_at,error)")
         .eq("profile_id", ownerProfile.id)
         .order("created_at", { ascending: false })
         .limit(50),
@@ -236,7 +237,7 @@ export function OwnerDashboard() {
     setMessage("");
 
     const form = new FormData(event.currentTarget);
-    const delay = Math.min(72, Math.max(1, Number(form.get("delay_hours")) || 24));
+    const delay = Math.min(336, Math.max(1, Number(form.get("delay_hours")) || 24));
     const updates = {
       name: String(form.get("name") || editingMode.name).trim(),
       delay_hours: delay,
@@ -351,11 +352,13 @@ export function OwnerDashboard() {
         <button className="secondaryButton" onClick={() => void toggleFollowup()}>{profile.followup_enabled ? "Pause automatic follow-up" : "Turn automatic follow-up on"}</button>
       </section>
 
+      <ConnectedEmail key={profile.id} />
+
       {activeMode && (
         <form className="card sectionGap stack" onSubmit={saveMode} key={editingMode?.id ?? activeMode.id}>
           <div className="miniLabel">Edit {editingMode?.kind === "event" ? "event" : "everyday"} follow-up</div>
           <div className="field"><label htmlFor="mode-name">Mode name</label><input className="input" id="mode-name" name="name" defaultValue={editingMode?.name ?? activeMode.name} /></div>
-          <div className="field"><label htmlFor="delay-hours">Send after</label><input className="input" id="delay-hours" name="delay_hours" type="number" min="1" max="72" defaultValue={editingMode?.delay_hours ?? activeMode.delay_hours} /></div>
+          <div className="field"><label htmlFor="delay-hours">Send after</label><input className="input" id="delay-hours" name="delay_hours" type="number" min="1" max="336" defaultValue={editingMode?.delay_hours ?? activeMode.delay_hours} /></div>
           <div className="field"><label htmlFor="subject-template">Subject</label><input className="input" id="subject-template" name="subject_template" defaultValue={editingMode?.subject_template ?? activeMode.subject_template} required /></div>
           <div className="field"><label htmlFor="body-template">Message</label><textarea className="textarea" id="body-template" name="body_template" defaultValue={editingMode?.body_template ?? activeMode.body_template} required /></div>
           <div className="helper" style={{ textAlign: "left", marginTop: 0 }}>Use <strong>{"{{first_name}}"}</strong> to personalize the message.</div>
@@ -375,7 +378,11 @@ export function OwnerDashboard() {
             ? "✓ Sent"
             : followup?.status === "failed"
               ? "Needs attention"
-              : followup?.send_at
+              : followup?.status === "cancelled"
+                ? "Cancelled"
+                : followup?.status === "sending"
+                  ? "Sending"
+                  : followup?.send_at
                 ? `Sends ${formatWhen(followup.send_at)}`
                 : "No follow-up";
 
@@ -384,6 +391,7 @@ export function OwnerDashboard() {
               <div>
                 <div className="connectionName">{name}</div>
                 <div className="connectionMeta">{connection.mode_name_snapshot || "No mode"} · {formatWhen(connection.created_at)}</div>
+                {followup?.status === "failed" && <div className="connectionMeta">{followup.error || "Check your email connection."}</div>}
               </div>
               <div className="connectionStatus">{status}</div>
             </div>

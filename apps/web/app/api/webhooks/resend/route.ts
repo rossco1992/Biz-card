@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         error: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("provider_message_id", providerMessageId);
+      .eq("provider_message_id", providerMessageId).eq("delivery_provider", "resend");
   }
 
   if (event.type === "email.bounced" || event.type === "email.failed") {
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         error: `Resend reported ${event.type}`,
         updated_at: new Date().toISOString(),
       })
-      .eq("provider_message_id", providerMessageId);
+      .eq("provider_message_id", providerMessageId).eq("delivery_provider", "resend");
   }
 
   return NextResponse.json({ ok: true });

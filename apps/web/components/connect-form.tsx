@@ -70,7 +70,7 @@ export function ConnectForm({ profile }: { profile: Profile }) {
           <a className="primaryButton" href={`/api/vcard/${profile.slug}`}>Save {profile.full_name.split(" ")[0]} to contacts</a>
         </section>
 
-        <div className="toast">That's it. The follow-up is handled automatically based on the card owner's active mode.</div>
+        <div className="toast">Your contact details have been saved. You can now save this card to your phone.</div>
       </div>
     );
   }

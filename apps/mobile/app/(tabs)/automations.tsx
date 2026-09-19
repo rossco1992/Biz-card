@@ -1,49 +1,16 @@
 import { router } from "expo-router";
-import { useRef, useState } from "react";
-import { DEFAULT_WEB_URL } from "@biz-card/core";
-import { supabase } from "@/lib/supabase";
+import { useState } from "react";
+import { ConnectedEmail } from "@/components/connected-email";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Button, Card, Notice, PageHeader, Screen, uiStyles } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function AutomationsScreen() {
-  const { profile, modes, session, toggleFollowups } = useSession();
-  const [testing, setTesting] = useState(false);
-  const [testMessage, setTestMessage] = useState("");
-  const testInFlight = useRef(false);
+  const { profile, modes, toggleFollowups } = useSession();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   if (!profile) return null;
-  const activeMode = modes.find((mode) => mode.id === profile.active_mode_id);
-
-  async function sendTest() {
-    if (!supabase || !activeMode || testInFlight.current) return;
-    testInFlight.current = true;
-    setTesting(true); setError(""); setTestMessage("");
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    try {
-      const { data, error: authError } = await supabase.auth.getSession();
-      if (authError || !data.session) throw new Error("Sign in again to send a test.");
-      const base = (process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).replace(/\/$/, "");
-      const response = await fetch(`${base}/api/test-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
-        body: JSON.stringify({ mode_id: activeMode.id }),
-        signal: controller.signal,
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.ok) throw new Error(result?.error || "Test email is unavailable. Deploy the latest web version first.");
-      setTestMessage(`Resend accepted the test for ${result.recipient}. Check your inbox and spam folder. Existing schedules are unchanged.`);
-    } catch (cause) {
-      setError(cause instanceof Error && cause.name === "AbortError"
-        ? "The request timed out; it may still have sent. Check your inbox before retrying."
-        : cause instanceof Error ? cause.message : "Could not send the test email.");
-    } finally {
-      clearTimeout(timeout); testInFlight.current = false; setTesting(false);
-    }
-  }
 
   async function toggle() {
     setBusy(true);
@@ -56,19 +23,14 @@ export default function AutomationsScreen() {
       <PageHeader eyebrow="Follow-up engine" title="Automations" />
       <Text style={uiStyles.body}>Choose what gets sent after someone connects. Your active mode follows your QR everywhere.</Text>
       {error ? <Notice tone="error">{error}</Notice> : null}
+      <ConnectedEmail />
       <Card>
         <View style={uiStyles.between}>
-          <View style={styles.toggleCopy}><Text style={uiStyles.sectionTitle}>Automatic follow-up</Text><Text style={uiStyles.small}>{profile.followup_enabled ? "New connections are being scheduled." : "Connections save, but no email is scheduled."}</Text></View>
+          <View style={styles.toggleCopy}><Text style={uiStyles.sectionTitle}>Automatic follow-up</Text><Text style={uiStyles.small}>{profile.followup_enabled ? "Follow-ups are enabled. A connected email account is required." : "Connections save, but no email is scheduled."}</Text></View>
           <Switch value={profile.followup_enabled} disabled={busy} onValueChange={() => void toggle()} trackColor={{ false: "#CCD0CD", true: "#78AE9B" }} thumbColor={profile.followup_enabled ? colors.accent : "#F8F8F6"} />
         </View>
       </Card>
       <View style={uiStyles.between}><Text style={uiStyles.sectionTitle}>Your modes</Text><Text style={styles.count}>{modes.length}</Text></View>
-      <Card>
-        <Text style={uiStyles.sectionTitle}>Temporary email test</Text>
-        <Text style={uiStyles.small}>Send the saved {activeMode?.name ?? "active mode"} message immediately to {session?.user.email ?? "your signed-in email"}. No connections or schedules are changed.</Text>
-        <Button variant="secondary" onPress={() => void sendTest()} loading={testing} disabled={!activeMode || !session?.user.email}>Send test email</Button>
-        {testMessage ? <Notice tone="success">{testMessage}</Notice> : null}
-      </Card>
       <View style={styles.modeList}>
         {modes.map((mode) => {
           const active = profile.active_mode_id === mode.id;

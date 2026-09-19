@@ -1,4 +1,32 @@
 export type FollowupStatus = "scheduled" | "sending" | "sent" | "cancelled" | "failed";
+export type MailProvider = "google" | "microsoft";
+export type Mailbox = {
+  profile_id: string;
+  id: string;
+  provider: MailProvider;
+  email: string;
+  refresh_token_encrypted: string;
+  status: "connected" | "reconnect";
+  updated_at: string;
+};
+export type MailboxStatus = {
+  mailbox: Pick<Mailbox, "id" | "provider" | "email" | "status"> | null;
+  providers: { google: boolean; microsoft: boolean };
+};
+export type MailboxOAuthState = {
+  state_hash: string;
+  launch_hash: string | null;
+  browser_hash: string | null;
+  profile_id: string;
+  provider: MailProvider;
+  platform: "web" | "mobile";
+  verifier_encrypted: string;
+  expires_at: string;
+  confirmation_hash: string | null;
+  pending_email: string | null;
+  pending_token_encrypted: string | null;
+  confirmed_mailbox_id: string | null;
+};
 export type ModeKind = "everyday" | "event";
 
 export type Profile = {
@@ -30,6 +58,8 @@ export type Mode = {
 };
 
 export type Followup = {
+  delivery_provider?: "resend" | "unconnected" | MailProvider;
+  mailbox_id?: string | null;
   id: string;
   connection_id: string;
   profile_id: string;
@@ -80,6 +110,8 @@ type RowShape<Row, Insert, Update, Relationships extends Relationship<string, st
 export type Database = {
   public: {
     Tables: {
+      mailboxes: RowShape<Mailbox, Mailbox, Partial<Mailbox>>;
+      mailbox_oauth_states: RowShape<MailboxOAuthState, MailboxOAuthState, Partial<MailboxOAuthState>>;
       profiles: RowShape<
         Required<Profile>,
         Omit<Profile, "id" | "active_mode_id" | "created_at" | "updated_at"> & Partial<Pick<Profile, "id" | "active_mode_id" | "created_at" | "updated_at">>,
@@ -113,7 +145,11 @@ export type Database = {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      finish_mailbox_connection: { Args: { p_confirmation_hash: string; p_profile_id: string }; Returns: undefined };
+      disconnect_mailbox: { Args: { p_profile_id: string }; Returns: undefined };
+      claim_mailbox_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
