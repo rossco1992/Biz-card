@@ -14,6 +14,7 @@ function statusFor(connection: Connection) {
   const followup = getConnectionFollowup(connection);
   if (!followup) return { label: "No follow-up", tone: "neutral" };
   if (followup.status === "sent") return { label: "Sent", tone: "success" };
+  if (followup.status === "sending") return { label: "Sending", tone: "scheduled" };
   if (followup.status === "failed") return { label: "Needs attention", tone: "danger" };
   if (followup.status === "cancelled") return { label: "Cancelled", tone: "neutral" };
   return { label: `Sends ${when(followup.send_at)}`, tone: "scheduled" };
@@ -50,6 +51,7 @@ export default function ConnectionsScreen() {
                 <Text style={styles.name}>{connectionName(item.first_name, item.last_name)}</Text>
                 <Text numberOfLines={1} style={styles.email}>{item.email}</Text>
                 <Text style={styles.meta}>{item.mode_name_snapshot || "No mode"} · {when(item.created_at)}</Text>
+                {getConnectionFollowup(item)?.status === "failed" ? <Text style={styles.meta}>{getConnectionFollowup(item)?.error || "Check your email connection."}</Text> : null}
               </View>
               <View style={[styles.status, status.tone === "success" && styles.success, status.tone === "danger" && styles.danger, status.tone === "scheduled" && styles.scheduled]}><Text style={styles.statusText}>{status.label}</Text></View>
             </View>
