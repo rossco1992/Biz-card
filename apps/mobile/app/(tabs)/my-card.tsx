@@ -1,4 +1,5 @@
-import { DEFAULT_WEB_URL, initials, publicCardUrl } from "@biz-card/core";
+import { ProfilePhoto } from "@/components/profile-photo";
+import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
 import { useMemo, useState } from "react";
 import { Pressable, Share, StyleSheet, Text, View } from "react-native";
@@ -22,7 +23,7 @@ export default function MyCardScreen() {
 
   return (
     <Screen>
-      <PageHeader eyebrow="Your smart card" title="Ready to connect." action={<View style={styles.avatar}><Text style={styles.avatarText}>{initials(profile.full_name)}</Text></View>} />
+      <PageHeader eyebrow="Your smart card" title="Ready to connect." action={<ProfilePhoto name={profile.full_name} url={profile.avatar_url} size={48} />} />
       {error ? <Notice tone="error">{error}</Notice> : null}
       <Card style={styles.qrCard}>
         <View style={styles.identity}>

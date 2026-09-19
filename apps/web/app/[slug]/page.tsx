@@ -1,3 +1,4 @@
+import { ProfilePhoto } from "@/components/profile-photo";
 import { notFound } from "next/navigation";
 import { ConnectForm } from "@/components/connect-form";
 import { getPublicProfile } from "@/lib/profile";
@@ -8,12 +9,6 @@ export default async function PublicCardPage({ params }: { params: Promise<{ slu
 
   if (!profile) notFound();
 
-  const initials = String(profile.full_name)
-    .split(" ")
-    .map((part: string) => part[0])
-    .slice(0, 2)
-    .join("");
-
   const firstName = String(profile.full_name).split(" ")[0];
 
   return (
@@ -23,7 +18,7 @@ export default async function PublicCardPage({ params }: { params: Promise<{ slu
       </div>
 
       <div className="profileHeader">
-        <div className="profileMark">{initials}</div>
+        <ProfilePhoto name={profile.full_name} url={"avatar_url" in profile ? profile.avatar_url : null} />
         <div>
           <div className="profileName">{profile.full_name}</div>
           <div className="profileMeta">{profile.title} · {profile.company}</div>

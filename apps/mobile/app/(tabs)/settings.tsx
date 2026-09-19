@@ -1,3 +1,4 @@
+import { ProfilePhotoSettings } from "@/components/profile-photo-settings";
 import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
@@ -20,7 +21,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (!profile) return;
     setFullName(profile.full_name); setCompany(profile.company); setTitle(profile.title); setEmail(profile.email); setPhone(profile.phone ?? ""); setWebsite(profile.website ?? "");
-  }, [profile]);
+  }, [profile?.full_name, profile?.company, profile?.title, profile?.email, profile?.phone, profile?.website]);
   if (!profile) return null;
 
   async function save() {
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
     <Screen>
       <PageHeader eyebrow="Account & card" title="Settings" />
       <Text style={uiStyles.body}>Keep the contact details on your public card current.</Text>
+      <ProfilePhotoSettings />
       <Card>
         <Text style={uiStyles.sectionTitle}>Card profile</Text>
         <Field label="Full name" value={fullName} onChangeText={setFullName} />
