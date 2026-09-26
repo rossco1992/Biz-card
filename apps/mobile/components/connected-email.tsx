@@ -11,6 +11,9 @@ export function ConnectedEmail() {
   const [data, setData] = useState<MailboxStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [refreshing, setRefreshing] = useState(true);
+  const refreshVersion = useRef(0);
   const inFlight = useRef(false);
   const base = (process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).replace(/\/$/, "");
   const api = useCallback(async (path = "", method = "GET", body?: object) => {
@@ -26,11 +29,23 @@ export function ConnectedEmail() {
       return result;
     } finally { clearTimeout(timeout); }
   }, [base]);
-  const refresh = useCallback(async () => { setData(await api()); }, [api]);
+  const refresh = useCallback(async () => {
+    const version = ++refreshVersion.current;
+    setRefreshing(true);
+    try {
+      const result = await api();
+      if (version === refreshVersion.current) { setData(result); setLoadError(""); }
+    } catch (cause) {
+      if (version === refreshVersion.current) setLoadError("Could not load your email connection. Check your connection and tap Refresh connection.");
+      throw cause;
+    } finally {
+      if (version === refreshVersion.current) setRefreshing(false);
+    }
+  }, [api]);
   useFocusEffect(useCallback(() => {
-    void refresh().catch(() => setError("Could not load your email connection. Try refreshing."));
+    void refresh().catch(() => {});
     const listener = AppState.addEventListener("change", state => {
-      if (state === "active") void refresh().catch(() => setError("Could not refresh your email connection."));
+      if (state === "active") void refresh().catch(() => {});
     });
     return () => listener.remove();
   }, [refresh]));
@@ -71,10 +86,13 @@ export function ConnectedEmail() {
       <Text style={uiStyles.small}>Connections are saved, but follow-ups will not send until you connect an email account.</Text>
       <Button disabled={busy || !data?.providers.google} onPress={() => void connect("google")}>Connect Gmail</Button>
       <Button variant="secondary" disabled={busy || !data?.providers.microsoft} onPress={() => void connect("microsoft")}>Connect Outlook</Button>
-      {data && (!data.providers.google || !data.providers.microsoft) ? <Text style={uiStyles.small}>An unavailable provider is still being set up.</Text> : null}
+      {!data && refreshing ? <Text accessibilityLiveRegion="polite" style={uiStyles.small}>Checking email connection options…</Text> : null}
+      {data && (!data.providers.google || !data.providers.microsoft) ? <Notice>
+        {!data.providers.google && !data.providers.microsoft ? "Gmail and Outlook connections are" : !data.providers.google ? "Gmail connection is" : "Outlook connection is"} temporarily unavailable. You don’t need to configure anything yourself. Try refreshing later; you can still save and share contacts.
+      </Notice> : null}
     </>}
     {busy ? <Text style={uiStyles.small}>Updating your email connection…</Text> : null}
-    {error ? <Notice tone="error">{error}</Notice> : null}
-    <Button variant="secondary" disabled={busy} onPress={() => { setError(""); void refresh().catch(() => setError("Could not refresh your email connection.")); }}>Refresh connection</Button>
+    {error || loadError ? <Notice tone="error">{error || loadError}</Notice> : null}
+    <Button variant="secondary" disabled={busy || refreshing} loading={refreshing} onPress={() => { setError(""); void refresh().catch(() => {}); }}>Refresh connection</Button>
   </Card>;
 }
