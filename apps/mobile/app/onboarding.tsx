@@ -1,4 +1,4 @@
-import { slugify } from "@biz-card/core";
+import { DEFAULT_WEB_URL, slugify } from "@biz-card/core";
 import { Redirect, router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
@@ -18,6 +18,7 @@ export default function Onboarding() {
   const [email, setEmail] = useState(session?.user.email ?? "");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
+  const cardHost = new URL(process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).host;
   const suggestedSlug = useMemo(() => slugify(slug || fullName), [fullName, slug]);
 
   function changeStep(next: number) {
@@ -75,7 +76,7 @@ export default function Onboarding() {
           <Text style={uiStyles.body}>Your QR always points here, even when you switch follow-up modes.</Text>
           <Card>
             <Field label="Public card URL" value={slug} onChangeText={setSlug} autoCapitalize="none" autoCorrect={false} />
-            <View style={styles.urlPreview}><Text style={styles.urlMuted}>bizcard-nu.vercel.app/</Text><Text style={styles.urlStrong}>{suggestedSlug || "your-name"}</Text></View>
+            <View style={styles.urlPreview}><Text style={styles.urlMuted}>{cardHost}/</Text><Text style={styles.urlStrong}>{suggestedSlug || "your-name"}</Text></View>
             {error ? <Notice tone="error">{error}</Notice> : null}
             <Button onPress={() => void finish()} loading={busy} disabled={!suggestedSlug}>Create my card</Button>
             <Pressable onPress={() => changeStep(1)}><Text style={styles.back}>Back</Text></Pressable>
