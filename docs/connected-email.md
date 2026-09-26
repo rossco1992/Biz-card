@@ -91,3 +91,7 @@ Before enabling production scheduling:
 6. Run overlapping worker requests in staging, simulate a timeout/crash, and verify no automatic duplicate sends. Confirm old Resend schedules are ignored by the new worker.
 
 Live Google/Microsoft consent, sending, production migration and mobile device validation require configured provider applications and are not performed by the automated suite.
+
+### Production scheduler update (September 26, 2026)
+
+The GitHub schedule has exhibited multi-hour delays. Follow [the Supabase scheduler setup](followup-scheduler.md) for the production timer and its cutover checks. Keep GitHub enabled until the replacement is verified.
