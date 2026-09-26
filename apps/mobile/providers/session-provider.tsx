@@ -31,6 +31,7 @@ type SessionContextValue = {
   updateProfile: (input: Partial<ProfileInput & Pick<Profile, "avatar_url">>) => Promise<void>;
   activateMode: (modeId: string) => Promise<void>;
   toggleFollowups: () => Promise<void>;
+  deleteMode: (modeId: string) => Promise<void>;
   saveMode: (modeId: string | null, input: ModeInput) => Promise<void>;
 };
 
@@ -206,12 +207,22 @@ export function SessionProvider({ children }: PropsWithChildren) {
         throw updateError;
       }
     },
+    deleteMode: async (modeId) => {
+      if (!supabase || !profile || !session) throw new Error("Sign in again to delete this mode.");
+      if (profile.active_mode_id === modeId) throw new Error("Activate another mode in My Card before deleting this one.");
+      if (modes.length <= 1) throw new Error("Create another mode before deleting your last one.");
+      const { data, error: deleteError } = await supabase.from("modes").delete()
+        .eq("id", modeId).eq("profile_id", profile.id).select("id");
+      if (deleteError) throw new Error("Could not delete this mode. Please try again.");
+      if (!data?.length) throw new Error("This mode is no longer available. Refresh and try again.");
+      await hydrate(session.user.id);
+    },
     saveMode: async (modeId, input) => {
       if (!supabase || !profile || !session) return;
       const requestedDelay = Number.isFinite(input.delay_hours) ? input.delay_hours : 24;
       const payload = { ...input, delay_hours: Math.max(1, Math.min(72, requestedDelay)), updated_at: new Date().toISOString() };
       if (modeId) {
-        const { error: updateError } = await supabase.from("modes").update(payload).eq("id", modeId);
+        const { error: updateError } = await supabase.from("modes").update(payload).eq("id", modeId).eq("profile_id", profile.id);
         if (updateError) throw updateError;
       } else {
         const { error: insertError } = await supabase.from("modes").insert({ ...payload, profile_id: profile.id, kind: "event" });
