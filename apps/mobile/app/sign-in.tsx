@@ -1,9 +1,10 @@
+import { Brand } from "@/components/brand";
 import { Redirect } from "expo-router";
 import { useRef, useState } from "react";
 import { Keyboard, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Notice, Screen } from "@/components/ui";
 import { getSignInErrorMessage, isValidEmail } from "@/lib/sign-in";
-import { colors } from "@/constants/theme";
+import { colors, displayFont } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function SignIn() {
@@ -43,8 +44,8 @@ export default function SignIn() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Text style={styles.brand}>Biz Card</Text>
-        <Text style={styles.title}>Your card. Your follow-up.</Text>
+        <Brand tagline />
+        <Text style={styles.title}>Make every introduction count.</Text>
         <Text style={styles.copy}>Swap details in seconds and keep every promising introduction moving.</Text>
       </View>
       <Card>
@@ -79,9 +80,8 @@ export default function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingTop: 72, paddingBottom: 18 },
-  brand: { color: colors.accent, fontSize: 13, fontWeight: "900", letterSpacing: 1.7, textTransform: "uppercase", marginBottom: 18 },
-  title: { color: colors.ink, fontSize: 46, fontWeight: "800", lineHeight: 48, letterSpacing: -2.2, maxWidth: 340 },
+  hero: { paddingTop: 32, paddingBottom: 18 },
+  title: { color: colors.ink, fontFamily: displayFont, fontSize: 44, fontWeight: "400", lineHeight: 49, letterSpacing: -1.2, maxWidth: 340 },
   copy: { color: colors.muted, fontSize: 17, lineHeight: 25, marginTop: 16, maxWidth: 340 },
   finePrint: { color: colors.muted, fontSize: 12, textAlign: "center", lineHeight: 17 },
 });
