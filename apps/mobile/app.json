@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Biz Card",
+    "name": "Knct’d",
     "slug": "biz-card",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bizcard",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bizcard.mobile",
@@ -17,12 +17,6 @@
     "android": {
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.bizcard.mobile",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -37,13 +31,14 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#F7F2E7",
+          "imageWidth": 160
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Choose a profile photo for your public Biz Card.",
+          "photosPermission": "Choose a profile photo for your public Knct’d card.",
           "cameraPermission": false,
           "microphonePermission": false
         }

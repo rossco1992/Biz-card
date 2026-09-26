@@ -1,12 +1,13 @@
 :root {
-  --bg: #f5f3ee;
-  --card: #ffffff;
-  --ink: #111315;
-  --muted: #72777f;
-  --line: #e7e4de;
-  --accent: #111315;
-  --soft: #efede8;
-  --green: #e9f7ee;
+  --bg: #f7f2e7;
+  --card: #fffcf6;
+  --ink: #13252b;
+  --muted: #646c65;
+  --line: #e1d9cc;
+  --accent: #344f45;
+  --copper: #925a38;
+  --soft: #eee7db;
+  --green: #e4e9e1;
 }
 
 * { box-sizing: border-box; }
@@ -42,14 +43,16 @@ a { color: inherit; }
   margin-bottom: 30px;
 }
 
-.brand { font-size: 22px; font-weight: 850; letter-spacing: -.04em; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: Georgia, "Times New Roman", serif; font-size: 32px; font-weight: 400; letter-spacing: -.05em; white-space: nowrap; }
+.brand img { border-radius: 11px; }
+.brandCopper { color: var(--copper); }
 .avatar {
   width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
-  background: #111315; color: white; font-size: 13px; font-weight: 800;
+  background: #13252b; color: white; font-size: 13px; font-weight: 800;
 }
 
 .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 800; }
-.heroTitle { margin: 6px 0 10px; font-size: clamp(36px, 10vw, 48px); line-height: .98; letter-spacing: -.055em; }
+.heroTitle { font-family: Georgia, "Times New Roman", serif; font-weight: 400; margin: 6px 0 10px; font-size: clamp(36px, 10vw, 48px); line-height: 1.1; letter-spacing: -.035em; }
 .heroCopy { color: var(--muted); line-height: 1.52; font-size: 16px; max-width: 38ch; }
 
 .card {
@@ -70,8 +73,8 @@ a { color: inherit; }
 .qrWrap { width: min(250px, 76vw); aspect-ratio: 1; margin: 24px auto 14px; padding: 16px; border-radius: 24px; border: 1px solid var(--line); background: white; display: grid; place-items: center; }
 .qrWrap svg { width: 100% !important; height: 100% !important; }
 
-.statusPill { width: max-content; max-width: 100%; margin: 0 auto; padding: 8px 12px; border-radius: 999px; background: #f1f3f5; color: #56606d; font-size: 12px; font-weight: 800; }
-.statusDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #17a35b; margin-right: 7px; }
+.statusPill { width: max-content; max-width: 100%; margin: 0 auto; padding: 8px 12px; border-radius: 999px; background: #e4e9e1; color: #344f45; font-size: 12px; font-weight: 800; }
+.statusDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #344f45; margin-right: 7px; }
 .helper { text-align: center; color: var(--muted); font-size: 13px; line-height: 1.45; margin-top: 10px; }
 
 .primaryButton, .secondaryButton, .textButton {
@@ -87,7 +90,7 @@ a { color: inherit; }
 .automationCard p { margin: 0; color: var(--muted); line-height: 1.4; font-size: 13px; }
 
 .profileHeader { display: flex; gap: 13px; align-items: center; margin: 12px 0 28px; }
-.profileMark { width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; background: #111315; color: white; font-weight: 850; font-size: 18px; }
+.profileMark { width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; background: #13252b; color: white; font-weight: 850; font-size: 18px; }
 .profileName { font-size: 19px; font-weight: 850; letter-spacing: -.02em; }
 .profileMeta { color: var(--muted); margin-top: 3px; font-size: 13px; }
 
@@ -110,11 +113,15 @@ a { color: inherit; }
 .connectionRow:last-child { border-bottom: 0; }
 .connectionName { font-weight: 800; }
 .connectionMeta { color: var(--muted); font-size: 12px; margin-top: 3px; }
-.connectionStatus { font-size: 12px; color: #56606d; text-align: right; }
+.connectionStatus { font-size: 12px; color: #344f45; text-align: right; }
 
-.toast { margin-top: 14px; padding: 12px 14px; border-radius: 14px; font-size: 13px; background: #f4f6f8; color: #4d5662; }
+.toast { margin-top: 14px; padding: 12px 14px; border-radius: 14px; font-size: 13px; background: #eee7db; color: #646c65; }
 .error { background: #fff0f0; color: #8a2f2f; }
 
 @media (min-width: 700px) {
   .shell { padding-top: 42px; }
 }
+
+button:disabled { opacity: .55; cursor: not-allowed; }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--copper); outline-offset: 4px; }
+.input:focus, .textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #344f451a; }

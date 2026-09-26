@@ -14,7 +14,7 @@ export default function EmailConnected() {
     async function finish() {
       if (!receipt) throw new Error("Email connection was cancelled or expired.");
       const session = await supabase?.auth.getSession();
-      if (!session?.data.session) throw new Error("Sign in to the Biz Card account that started this connection, then connect again.");
+      if (!session?.data.session) throw new Error("Sign in to the Knct’d account that started this connection, then connect again.");
       const base = (process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).replace(/\/$/, "");
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 20000);

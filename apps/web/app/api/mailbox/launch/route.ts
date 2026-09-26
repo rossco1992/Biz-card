@@ -23,6 +23,6 @@ export async function GET(request: Request) {
     response.headers.set("Referrer-Policy", "no-referrer");
     return response;
   } catch {
-    return new Response("This email connection link expired. Return to Biz Card and try again.", { status: 400, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" } });
+    return new Response("This email connection link expired. Return to Knct’d and try again.", { status: 400, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" } });
   }
 }

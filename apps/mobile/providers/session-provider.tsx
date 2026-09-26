@@ -148,7 +148,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     sendMagicLink: async (email) => {
       if (!supabase) throw new Error("Supabase is not configured.");
       if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
-        throw Object.assign(new Error("Use the installed Biz Card prototype to sign in."), { code: "native_build_required" });
+        throw Object.assign(new Error("Use the installed Knct’d prototype to sign in."), { code: "native_build_required" });
       }
       setError("");
       setAuthError("");
