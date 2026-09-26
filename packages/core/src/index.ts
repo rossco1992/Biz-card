@@ -1,4 +1,4 @@
-export const DEFAULT_WEB_URL = "https://bizcard-nu.vercel.app";
+export const DEFAULT_WEB_URL = "https://www.getknctd.com";
 
 /** Unique connection_id makes this a to-one join; tolerate older array payloads. */
 export function getConnectionFollowup<T extends object>(
