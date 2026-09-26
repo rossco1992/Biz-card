@@ -27,7 +27,7 @@ export default function AutomationsScreen() {
       <Card>
         <View style={uiStyles.between}>
           <View style={styles.toggleCopy}><Text style={uiStyles.sectionTitle}>Automatic follow-up</Text><Text style={uiStyles.small}>{profile.followup_enabled ? "Follow-ups are enabled. A connected email account is required." : "Connections save, but no email is scheduled."}</Text></View>
-          <Switch value={profile.followup_enabled} disabled={busy} onValueChange={() => void toggle()} trackColor={{ false: "#CCD0CD", true: "#78AE9B" }} thumbColor={profile.followup_enabled ? colors.accent : "#F8F8F6"} />
+          <Switch value={profile.followup_enabled} disabled={busy} onValueChange={() => void toggle()} trackColor={{ false: "#CCD0CD", true: colors.accent }} thumbColor={profile.followup_enabled ? colors.accent : "#F8F8F6"} />
         </View>
       </Card>
       <View style={uiStyles.between}><Text style={uiStyles.sectionTitle}>Your modes</Text><Text style={styles.count}>{modes.length}</Text></View>

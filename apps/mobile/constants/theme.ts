@@ -1,11 +1,16 @@
+import { Platform } from "react-native";
+
+export const displayFont = Platform.select({ ios: "Georgia", android: "serif", default: "Georgia" });
 export const colors = {
-  ink: "#101513",
-  muted: "#68736E",
-  background: "#F3F1EA",
-  surface: "#FFFFFF",
-  line: "#E5E2D9",
-  accent: "#155D45",
-  accentSoft: "#DDF1E9",
+  ink: "#13252B",
+  muted: "#646C65",
+  background: "#F7F2E7",
+  surface: "#FFFCF6",
+  line: "#E1D9CC",
+  accent: "#344F45",
+  accentSoft: "#E4E9E1",
+  copper: "#925A38",
+  copperDecorative: "#BE8A63",
   warning: "#9A5B12",
   warningSoft: "#FFF0D7",
   danger: "#A43C3C",

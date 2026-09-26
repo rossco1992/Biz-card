@@ -3,7 +3,7 @@ import { Redirect, router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Notice, Screen, uiStyles } from "@/components/ui";
-import { colors } from "@/constants/theme";
+import { colors, displayFont } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function Onboarding() {
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   progress: { height: 5, flex: 1, borderRadius: 99, backgroundColor: colors.line },
   progressActive: { backgroundColor: colors.accent },
   stepLabel: { color: colors.accent, fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1.1 },
-  title: { color: colors.ink, fontSize: 37, lineHeight: 41, fontWeight: "800", letterSpacing: -1.6 },
+  title: { color: colors.ink, fontFamily: displayFont, fontSize: 37, lineHeight: 43, fontWeight: "400", letterSpacing: -0.8 },
   back: { color: colors.muted, fontWeight: "700", textAlign: "center", padding: 8 },
   urlPreview: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 4 },
   urlMuted: { color: colors.muted, fontSize: 13 },

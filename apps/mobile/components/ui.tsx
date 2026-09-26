@@ -14,7 +14,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radii } from "@/constants/theme";
+import { colors, radii, displayFont } from "@/constants/theme";
 
 /** One keyboard layout for forms and lists, including modal screens. */
 export function KeyboardFrame({ children }: PropsWithChildren) {
@@ -89,7 +89,7 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        placeholderTextColor="#9AA19D"
+        placeholderTextColor={colors.muted}
         returnKeyType={props.multiline ? "default" : "done"}
         submitBehavior={props.multiline ? "newline" : "blurAndSubmit"}
         {...props}
@@ -139,10 +139,10 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
   headerText: { flex: 1 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 5 },
-  title: { color: colors.ink, fontSize: 34, fontWeight: "800", letterSpacing: -1.5, lineHeight: 39 },
+  title: { color: colors.ink, fontFamily: displayFont, fontSize: 34, fontWeight: "400", letterSpacing: -0.8, lineHeight: 39 },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1, borderRadius: radii.large, padding: 18, gap: 16, shadowColor: "#24372F", shadowOpacity: 0.05, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   button: { minHeight: 54, borderRadius: radii.medium, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, borderWidth: 1 },
-  primaryButton: { backgroundColor: colors.ink, borderColor: colors.ink },
+  primaryButton: { backgroundColor: colors.accent, borderColor: colors.accent },
   secondaryButton: { backgroundColor: colors.surface, borderColor: colors.line },
   dangerButton: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
   buttonPressed: { opacity: 0.62 },
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   label: { color: colors.ink, fontSize: 13, fontWeight: "700" },
   input: { minHeight: 52, borderRadius: radii.medium, borderColor: colors.line, borderWidth: 1, backgroundColor: colors.surface, paddingHorizontal: 15, color: colors.ink, fontSize: 16 },
   multiline: { minHeight: 126, paddingTop: 14, textAlignVertical: "top" },
-  notice: { backgroundColor: "#ECEEEB", padding: 13, borderRadius: radii.small },
+  notice: { backgroundColor: colors.accentSoft, padding: 13, borderRadius: radii.small },
   errorNotice: { backgroundColor: colors.dangerSoft },
   successNotice: { backgroundColor: colors.accentSoft },
   noticeText: { color: colors.muted, fontSize: 13, lineHeight: 18 },

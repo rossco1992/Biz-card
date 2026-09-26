@@ -1,3 +1,5 @@
+
+import { Brand } from "@/components/brand";
 import { ProfilePhoto } from "@/components/profile-photo";
 import { notFound } from "next/navigation";
 import { ConnectForm } from "@/components/connect-form";
@@ -14,7 +16,7 @@ export default async function PublicCardPage({ params }: { params: Promise<{ slu
   return (
     <main className="shell">
       <div className="topbar">
-        <div className="brand">Biz Card</div>
+        <Brand />
       </div>
 
       <div className="profileHeader">

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     render: mergeTemplate,
     send: async (message, idempotencyKey) => {
       const { data, error } = await resend.emails.send({
-        ...message, from: `Biz Card test <${from}>`,
+        ...message, from: `Knct’d test <${from}>`,
       }, { idempotencyKey });
       return !error && Boolean(data?.id);
     },

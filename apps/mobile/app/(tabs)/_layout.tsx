@@ -16,9 +16,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: "#89928D",
+        tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginBottom: 3 },
-        tabBarStyle: { height: 82, paddingTop: 7, backgroundColor: "#FCFCFA", borderTopColor: colors.line },
+        tabBarStyle: { height: 82, paddingTop: 7, backgroundColor: colors.surface, borderTopColor: colors.line },
       }}
     >
       <Tabs.Screen name="my-card" options={{ title: "My Card", tabBarIcon: ({ color }) => icon("▦", String(color)) }} />

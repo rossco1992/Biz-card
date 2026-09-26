@@ -1,5 +1,7 @@
 "use client";
 
+import { Brand } from "@/components/brand";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ConnectedEmail } from "@/components/connected-email";
 import { QRCodeSVG } from "qrcode.react";
@@ -259,13 +261,13 @@ export function OwnerDashboard() {
   }
 
   if (loading) {
-    return <main className="shell"><div className="brand">Biz Card</div><div className="toast sectionGap">Loading…</div></main>;
+    return <main className="shell"><Brand /><div className="toast sectionGap">Loading…</div></main>;
   }
 
   if (!supabase) {
     return (
       <main className="shell">
-        <div className="brand">Biz Card</div>
+        <Brand />
         <h1 className="heroTitle sectionGap">Almost ready.</h1>
         <p className="heroCopy">Connect Supabase and add the public URL + anon key to enable real accounts. The public card demo still works at <a href="/ross">/ross</a>.</p>
       </main>
@@ -275,7 +277,7 @@ export function OwnerDashboard() {
   if (!session) {
     return (
       <main className="shell">
-        <div className="topbar"><div className="brand">Biz Card</div></div>
+        <div className="topbar"><Brand /></div>
         <div className="eyebrow">Private pilot</div>
         <h1 className="heroTitle">Your card.<br />Your follow-up.</h1>
         <p className="heroCopy">Sign in with your email. No password required.</p>
@@ -295,7 +297,7 @@ export function OwnerDashboard() {
   if (!profile) {
     return (
       <main className="shell">
-        <div className="topbar"><div className="brand">Biz Card</div><button className="textButton" style={{ width: "auto" }} onClick={() => void supabase.auth.signOut()}>Sign out</button></div>
+        <div className="topbar"><Brand /><button className="textButton" style={{ width: "auto" }} onClick={() => void supabase.auth.signOut()}>Sign out</button></div>
         <div className="eyebrow">One-time setup</div>
         <h1 className="heroTitle">Create your card.</h1>
         <p className="heroCopy">This takes about a minute. You can change the follow-up messages afterward.</p>
@@ -319,7 +321,7 @@ export function OwnerDashboard() {
   return (
     <main className="shell">
       <div className="topbar">
-        <div className="brand">Biz Card</div>
+        <Brand />
         <button className="avatar" title="Sign out" onClick={() => void supabase.auth.signOut()}>{initials}</button>
       </div>
 

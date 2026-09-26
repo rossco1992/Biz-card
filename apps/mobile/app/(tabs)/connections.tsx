@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   name: { color: colors.ink, fontSize: 15, fontWeight: "800" },
   email: { color: colors.muted, fontSize: 12, marginTop: 2 },
   meta: { color: "#8B938F", fontSize: 11, marginTop: 4 },
-  status: { maxWidth: 92, borderRadius: 99, backgroundColor: "#E9EAE7", paddingVertical: 6, paddingHorizontal: 9 },
+  status: { maxWidth: 92, borderRadius: 99, backgroundColor: colors.accentSoft, paddingVertical: 6, paddingHorizontal: 9 },
   success: { backgroundColor: colors.accentSoft },
   danger: { backgroundColor: colors.dangerSoft },
   scheduled: { backgroundColor: colors.warningSoft },

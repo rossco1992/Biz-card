@@ -1,3 +1,4 @@
+import { Brand } from "@/components/brand";
 import { ProfilePhotoSettings } from "@/components/profile-photo-settings";
 import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
   const cardUrl = publicCardUrl(profile.slug, process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL);
   return (
     <Screen>
+      <Brand />
       <PageHeader eyebrow="Account & card" title="Settings" />
       <Text style={uiStyles.body}>Keep the contact details on your public card current.</Text>
       <ProfilePhotoSettings />

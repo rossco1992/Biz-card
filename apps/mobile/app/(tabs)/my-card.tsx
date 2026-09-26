@@ -1,3 +1,4 @@
+import { Brand } from "@/components/brand";
 import { ProfilePhoto } from "@/components/profile-photo";
 import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
@@ -23,6 +24,7 @@ export default function MyCardScreen() {
 
   return (
     <Screen>
+      <Brand />
       <PageHeader eyebrow="Your smart card" title="Ready to connect." action={<ProfilePhoto name={profile.full_name} url={profile.avatar_url} size={48} />} />
       {error ? <Notice tone="error">{error}</Notice> : null}
       <Card style={styles.qrCard}>
@@ -79,8 +81,8 @@ const styles = StyleSheet.create({
   refresh: { color: colors.accent, fontSize: 13, fontWeight: "700" },
   modeList: { gap: 9 },
   mode: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,.72)", borderColor: colors.line, borderWidth: 1, borderRadius: radii.medium, padding: 14 },
-  modeActive: { backgroundColor: colors.surface, borderColor: "#B9D3C9" },
-  modeIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: "#ECEBE6", alignItems: "center", justifyContent: "center" },
+  modeActive: { backgroundColor: colors.surface, borderColor: colors.accent },
+  modeIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" },
   modeIconActive: { backgroundColor: colors.accentSoft },
   modeCopy: { flex: 1 },
   modeName: { color: colors.ink, fontSize: 15, fontWeight: "800", marginBottom: 3 },
