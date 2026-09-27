@@ -23,10 +23,11 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) return { profile: null, modes: [], connections: [] };
+  if (!profile) return { profile: null, modes: [], events: [], connections: [] };
 
-  const [modesResult, connectionsResult] = await Promise.all([
+  const [modesResult, eventsResult, connectionsResult] = await Promise.all([
     client.from("modes").select("*").eq("profile_id", profile.id).order("created_at"),
+    client.from("events").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
     client
       .from("connections")
       .select("*,followups(status,send_at,sent_at,error)")
@@ -36,11 +37,13 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
   ]);
 
   if (modesResult.error) throw modesResult.error;
+  if (eventsResult.error) throw eventsResult.error;
   if (connectionsResult.error) throw connectionsResult.error;
 
   return {
     profile,
     modes: modesResult.data ?? [],
+    events: eventsResult.data ?? [],
     connections: connectionsResult.data ?? [],
   };
 }
