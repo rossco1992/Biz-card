@@ -1,25 +1,40 @@
 import { Brand } from "@/components/brand";
+import { router } from "expo-router";
 import { ProfilePhoto } from "@/components/profile-photo";
 import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
 import { useMemo, useState } from "react";
-import { Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { Button, Card, Notice, PageHeader, Screen, uiStyles } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function MyCardScreen() {
-  const { profile, modes, activateMode, refreshing, refresh, error } = useSession();
+  const { profile, modes, events, activateMode, activateEvent, refreshing, refresh, error } = useSession();
   const [switching, setSwitching] = useState("");
   const webUrl = process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL;
   const cardUrl = profile ? publicCardUrl(profile.slug, webUrl) : webUrl;
   const activeMode = useMemo(() => modes.find((mode) => mode.id === profile?.active_mode_id) ?? modes[0], [modes, profile]);
+  const activeEvent = useMemo(() => events.find((event) => event.id === profile?.active_event_id) ?? null, [events, profile?.active_event_id]);
   if (!profile) return null;
 
   async function switchMode(modeId: string) {
+    const nextMode = modes.find((mode) => mode.id === modeId);
+    if (nextMode?.kind === "event" && !activeEvent) {
+      Alert.alert("Add your event first", "Event mode works best when KNCT knows the event name and location.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Add event", onPress: () => router.push({ pathname: "/event-editor", params: { eventId: "new" } }) },
+      ]);
+      return;
+    }
     setSwitching(modeId);
     try { await activateMode(modeId); } finally { setSwitching(""); }
+  }
+
+  async function switchEvent(eventId: string) {
+    setSwitching(`event:${eventId}`);
+    try { await activateEvent(eventId); } finally { setSwitching(""); }
   }
 
   return (
@@ -58,7 +73,43 @@ export default function MyCardScreen() {
           );
         })}
       </View>
-      {switching ? <Text style={styles.switching}>Updating mode…</Text> : null}
+      {switching ? <Text style={styles.switching}>Updating…</Text> : null}
+
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={uiStyles.sectionTitle}>Event context</Text>
+          <Text style={uiStyles.small}>Name + location are added automatically when Event mode is active.</Text>
+        </View>
+        <Pressable onPress={() => router.push({ pathname: "/event-editor", params: { eventId: "new" } })}><Text style={styles.refresh}>+ New</Text></Pressable>
+      </View>
+
+      {events.length === 0 ? (
+        <Card>
+          <Text style={styles.eventEmptyTitle}>Make the follow-up instantly recognizable.</Text>
+          <Text style={uiStyles.small}>Add the conference, meetup, or client event once. KNCT will remember it for every connection you make there.</Text>
+          <Button variant="secondary" onPress={() => router.push({ pathname: "/event-editor", params: { eventId: "new" } })}>Add an event</Button>
+        </Card>
+      ) : (
+        <View style={styles.modeList}>
+          {events.map((event) => {
+            const active = event.id === activeEvent?.id;
+            return (
+              <Pressable key={event.id} onPress={() => void switchEvent(event.id)} style={[styles.mode, active && styles.modeActive]}>
+                <View style={[styles.modeIcon, active && styles.modeIconActive]}><Text>⌖</Text></View>
+                <View style={styles.modeCopy}>
+                  <Text style={styles.modeName}>{event.name}</Text>
+                  <Text style={uiStyles.small}>{event.location}</Text>
+                </View>
+                <Pressable hitSlop={10} onPress={(press) => { press.stopPropagation(); router.push({ pathname: "/event-editor", params: { eventId: event.id } }); }}>
+                  <Text style={styles.editEvent}>Edit</Text>
+                </Pressable>
+                <View style={[styles.radio, active && styles.radioActive]}>{active ? <View style={styles.radioInner} /> : null}</View>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+      {activeMode?.kind === "event" && activeEvent ? <Notice>Event follow-ups will identify you as {profile.full_name.split(" ")[0]} from {activeEvent.name} in {activeEvent.location}.</Notice> : null}
     </Screen>
   );
 }
@@ -90,4 +141,6 @@ const styles = StyleSheet.create({
   radioActive: { borderColor: colors.accent },
   radioInner: { width: 11, height: 11, borderRadius: 99, backgroundColor: colors.accent },
   switching: { color: colors.muted, fontSize: 12, textAlign: "center" },
+  eventEmptyTitle: { color: colors.ink, fontSize: 16, fontWeight: "800" },
+  editEvent: { color: colors.accent, fontSize: 12, fontWeight: "800", paddingHorizontal: 3 },
 });

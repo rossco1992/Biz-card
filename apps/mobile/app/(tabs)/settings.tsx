@@ -16,13 +16,15 @@ export default function SettingsScreen() {
   const [email, setEmail] = useState(profile?.email ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [website, setWebsite] = useState(profile?.website ?? "");
+  const [signature, setSignature] = useState(profile?.email_signature ?? "");
   const [busy, setBusy] = useState(false);
+  const [signatureBusy, setSignatureBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
     if (!profile) return;
-    setFullName(profile.full_name); setCompany(profile.company); setTitle(profile.title); setEmail(profile.email); setPhone(profile.phone ?? ""); setWebsite(profile.website ?? "");
-  }, [profile?.full_name, profile?.company, profile?.title, profile?.email, profile?.phone, profile?.website]);
+    setFullName(profile.full_name); setCompany(profile.company); setTitle(profile.title); setEmail(profile.email); setPhone(profile.phone ?? ""); setWebsite(profile.website ?? ""); setSignature(profile.email_signature ?? "");
+  }, [profile?.full_name, profile?.company, profile?.title, profile?.email, profile?.phone, profile?.website, profile?.email_signature]);
   if (!profile) return null;
 
   async function save() {
@@ -32,6 +34,15 @@ export default function SettingsScreen() {
       setMessage("Profile saved.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your profile."); }
     finally { setBusy(false); }
+  }
+
+  async function saveSignature() {
+    setSignatureBusy(true); setMessage(""); setError("");
+    try {
+      await updateProfile({ email_signature: signature.trim() });
+      setMessage("Email signature saved. It will be added to modes that have signatures enabled.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your email signature."); }
+    finally { setSignatureBusy(false); }
   }
 
   function confirmSignOut() {
@@ -59,6 +70,12 @@ export default function SettingsScreen() {
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
         <Button onPress={() => void save()} loading={busy} disabled={!fullName.trim() || !email.trim()}>Save changes</Button>
+      </Card>
+      <Card>
+        <Text style={uiStyles.sectionTitle}>Email signature</Text>
+        <Text style={uiStyles.small}>Set this once. KNCT adds it to every follow-up mode where “Include my signature” is on.</Text>
+        <Field label="Signature" value={signature} onChangeText={setSignature} multiline placeholder={"Your name\nTitle · Company\nPhone or LinkedIn"} />
+        <Button onPress={() => void saveSignature()} loading={signatureBusy} disabled={signatureBusy}>Save signature</Button>
       </Card>
       <Card>
         <Text style={uiStyles.sectionTitle}>Public card</Text>

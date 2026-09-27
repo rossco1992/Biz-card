@@ -47,7 +47,7 @@ export default function AutomationsScreen() {
         })}
       </View>
       <Button variant="secondary" onPress={() => router.push({ pathname: "/mode-editor", params: { modeId: "new" } })}>+ New mode</Button>
-      <Notice>Use {"{{first_name}}"} in a subject or message to personalize it automatically.</Notice>
+      <Notice>Templates can use {"{{first_name}}"} plus event context like {"{{event_name}}"}, {"{{event_location}}"}, and {"{{event_context}}"}.</Notice>
     </Screen>
   );
 }

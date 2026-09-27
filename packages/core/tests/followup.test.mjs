@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { getConnectionFollowup } from "../src/index.ts";
+import { appendEmailSignature, buildEventContext, firstNameFromFullName, getConnectionFollowup, mergeTemplate } from "../src/index.ts";
 
 for (const status of ["scheduled", "sending", "sent", "failed", "cancelled"]) {
   test(`reads ${status} from a to-one object and a legacy array`, () => {
@@ -31,4 +31,27 @@ test("both display consumers use the shared accessor", () => {
     assert.match(source, /const followup = getConnectionFollowup\(connection\)/);
     assert.doesNotMatch(source, /connection\.followups\?\.\[0\]/);
   }
+});
+
+
+test("event context makes a follow-up immediately recognizable", () => {
+  const values = {
+    first_name: "Mike",
+    my_first_name: firstNameFromFullName("Ross Cohen"),
+    event_name: "SaaStr Annual 2026",
+    event_location: "San Francisco, CA",
+    event_context: buildEventContext("SaaStr Annual 2026", "San Francisco, CA"),
+  };
+  assert.equal(values.my_first_name, "Ross");
+  assert.equal(values.event_context, "SaaStr Annual 2026 in San Francisco, CA");
+  assert.equal(
+    mergeTemplate("{{my_first_name}} from {{event_name}} — great meeting you", values),
+    "Ross from SaaStr Annual 2026 — great meeting you",
+  );
+});
+
+test("email signature is appended once only when the mode enables it", () => {
+  assert.equal(appendEmailSignature("Hello Mike", "Ross Cohen\nKNCT", true), "Hello Mike\n\nRoss Cohen\nKNCT");
+  assert.equal(appendEmailSignature("Hello Mike", "Ross Cohen\nKNCT", false), "Hello Mike");
+  assert.equal(appendEmailSignature("Hello Mike", "   ", true), "Hello Mike");
 });
