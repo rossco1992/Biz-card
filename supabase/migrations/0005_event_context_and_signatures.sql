@@ -32,6 +32,22 @@ alter table public.profiles
   add constraint profiles_active_event_fk
   foreign key (active_event_id) references public.events(id) on delete set null;
 
+create function public.ensure_active_event_owner()
+returns trigger language plpgsql set search_path = '' as $
+begin
+  if new.active_event_id is not null and not exists (
+    select 1 from public.events e where e.id = new.active_event_id and e.profile_id = new.id
+  ) then
+    raise exception 'Active event must belong to the same profile';
+  end if;
+  return new;
+end;
+$;
+
+create trigger profiles_active_event_owner
+before insert or update of active_event_id on public.profiles
+for each row execute function public.ensure_active_event_owner();
+
 alter table public.connections
   add column event_id uuid references public.events(id) on delete set null,
   add column event_name_snapshot text,
