@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validEmail } from "@/lib/mailbox-providers";
-import { mergeTemplate } from "@biz-card/core";
+import { appendEmailSignature, buildEventContext, firstNameFromFullName, mergeTemplate } from "@biz-card/core";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
   }
 
   const mode = profile.active_mode;
+  const event = mode?.kind === "event" ? profile.active_event : null;
   const { data: connection, error: connectionError } = await supabase
     .from("connections")
     .insert({
@@ -54,6 +55,9 @@ export async function POST(request: Request) {
       phone: phone || null,
       consent_at: new Date().toISOString(),
       mode_name_snapshot: mode?.name ?? null,
+      event_id: event?.id ?? null,
+      event_name_snapshot: event?.name ?? null,
+      event_location_snapshot: event?.location ?? null,
     })
     .select("id,created_at")
     .single();
@@ -76,9 +80,14 @@ export async function POST(request: Request) {
       first_name: firstName,
       last_name: lastName,
       full_name: [firstName, lastName].filter(Boolean).join(" "),
+      my_first_name: firstNameFromFullName(profile.full_name),
+      event_name: event?.name ?? "the event",
+      event_location: event?.location ?? "",
+      event_context: buildEventContext(event?.name, event?.location),
     };
     const subject = mergeTemplate(mode.subject_template, values);
-    const text = mergeTemplate(mode.body_template, values);
+    const body = mergeTemplate(mode.body_template, values);
+    const text = appendEmailSignature(body, profile.email_signature, mode.include_signature);
 
     const { data: followup, error: followupError } = await supabase
       .from("followups")
