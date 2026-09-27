@@ -33,7 +33,7 @@ alter table public.profiles
   foreign key (active_event_id) references public.events(id) on delete set null;
 
 create function public.ensure_active_event_owner()
-returns trigger language plpgsql set search_path = '' as $
+returns trigger language plpgsql set search_path = '' as $function$
 begin
   if new.active_event_id is not null and not exists (
     select 1 from public.events e where e.id = new.active_event_id and e.profile_id = new.id
@@ -42,7 +42,7 @@ begin
   end if;
   return new;
 end;
-$;
+$function$;
 
 create trigger profiles_active_event_owner
 before insert or update of active_event_id on public.profiles
