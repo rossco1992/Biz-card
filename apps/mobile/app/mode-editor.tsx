@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Button, Card, Field, Notice, Screen, uiStyles } from "@/components/ui";
 import { colors } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
@@ -14,6 +14,7 @@ export default function ModeEditor() {
   const [delay, setDelay] = useState(String(mode?.delay_hours ?? 24));
   const [subject, setSubject] = useState(mode?.subject_template ?? "Great meeting you");
   const [body, setBody] = useState(mode?.body_template ?? "Hey {{first_name}} — it was great meeting you. I wanted to follow up while our conversation was still fresh.");
+  const [includeSignature, setIncludeSignature] = useState(mode?.include_signature ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,7 +52,7 @@ export default function ModeEditor() {
     setBusy(true);
     setError("");
     try {
-      await saveMode(creating ? null : mode?.id ?? null, { name: name.trim(), delay_hours: Number(delay), subject_template: subject.trim(), body_template: body.trim() });
+      await saveMode(creating ? null : mode?.id ?? null, { name: name.trim(), delay_hours: Number(delay), subject_template: subject.trim(), body_template: body.trim(), include_signature: includeSignature });
       router.back();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save this mode.");
@@ -75,7 +76,14 @@ export default function ModeEditor() {
         <Field label="Send after (hours)" value={delay} onChangeText={setDelay} keyboardType="number-pad" />
         <Field label="Email subject" value={subject} onChangeText={setSubject} />
         <Field label="Message" value={body} onChangeText={setBody} multiline />
-        <Text style={uiStyles.small}>Available personalization: {"{{first_name}}"}, {"{{last_name}}"}, {"{{full_name}}"}</Text>
+        <View style={styles.signatureRow}>
+          <View style={styles.signatureCopy}>
+            <Text style={styles.signatureTitle}>Include my signature</Text>
+            <Text style={uiStyles.small}>{profile?.email_signature?.trim() ? "Uses the signature saved in Settings." : "Set up your signature once in Settings."}</Text>
+          </View>
+          <Switch value={includeSignature} onValueChange={setIncludeSignature} trackColor={{ false: "#CCD0CD", true: colors.accent }} thumbColor={includeSignature ? colors.accent : "#F8F8F6"} />
+        </View>
+        <Text style={uiStyles.small}>Available personalization: {"{{first_name}}"}, {"{{last_name}}"}, {"{{full_name}}"}, {"{{my_first_name}}"}, {"{{event_name}}"}, {"{{event_location}}"}, {"{{event_context}}"}</Text>
         {error ? <Notice tone="error">{error}</Notice> : null}
         <Button onPress={() => void save()} loading={busy} disabled={busy || (!creating && !mode) || !name.trim() || !subject.trim() || !body.trim() || !Number.isFinite(Number(delay))}>Save mode</Button>
       </Card>
@@ -95,4 +103,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.ink, fontWeight: "800" },
   headerSpacer: { width: 48 },
   title: { color: colors.ink, fontSize: 34, fontWeight: "800", letterSpacing: -1.4 },
+  signatureRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingVertical: 2 },
+  signatureCopy: { flex: 1, gap: 3 },
+  signatureTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
 });
