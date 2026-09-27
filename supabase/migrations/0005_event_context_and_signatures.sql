@@ -18,6 +18,7 @@ create table public.events (
 create index events_profile_idx on public.events (profile_id, created_at desc);
 
 alter table public.events enable row level security;
+grant select, insert, update, delete on public.events to authenticated;
 
 create policy "owners can manage own events"
 on public.events for all
