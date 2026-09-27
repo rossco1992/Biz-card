@@ -1,6 +1,6 @@
 import { defaultModes } from "@biz-card/core";
 import { loadOwnerWorkspace } from "@biz-card/supabase";
-import type { Connection, Mode, Profile } from "@biz-card/types";
+import type { Connection, Event, Mode, Profile } from "@biz-card/types";
 import type { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import Constants, { ExecutionEnvironment } from "expo-constants";
@@ -10,13 +10,15 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useEffe
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type ProfileInput = Pick<Profile, "slug" | "full_name" | "company" | "title" | "email" | "phone" | "website">;
-type ModeInput = Pick<Mode, "name" | "delay_hours" | "subject_template" | "body_template">;
+type ModeInput = Pick<Mode, "name" | "delay_hours" | "subject_template" | "body_template" | "include_signature">;
+type EventInput = Pick<Event, "name" | "location">;
 
 type SessionContextValue = {
   configured: boolean;
   session: Session | null;
   profile: Profile | null;
   modes: Mode[];
+  events: Event[];
   connections: Connection[];
   loading: boolean;
   refreshing: boolean;
@@ -28,11 +30,14 @@ type SessionContextValue = {
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   createProfile: (input: ProfileInput) => Promise<void>;
-  updateProfile: (input: Partial<ProfileInput & Pick<Profile, "avatar_url">>) => Promise<void>;
+  updateProfile: (input: Partial<ProfileInput & Pick<Profile, "avatar_url" | "email_signature">>) => Promise<void>;
   activateMode: (modeId: string) => Promise<void>;
+  activateEvent: (eventId: string) => Promise<void>;
   toggleFollowups: () => Promise<void>;
   deleteMode: (modeId: string) => Promise<void>;
   saveMode: (modeId: string | null, input: ModeInput) => Promise<void>;
+  saveEvent: (eventId: string | null, input: EventInput) => Promise<void>;
+  deleteEvent: (eventId: string) => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -41,6 +46,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [modes, setModes] = useState<Mode[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,6 +63,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       const workspace = await loadOwnerWorkspace(supabase, userId);
       setProfile(workspace.profile as Profile | null);
       setModes(workspace.modes as Mode[]);
+      setEvents(workspace.events as Event[]);
       setConnections(workspace.connections as unknown as Connection[]);
       setError("");
     } catch (cause) {
@@ -118,6 +125,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       else {
         setProfile(null);
         setModes([]);
+        setEvents([]);
         setConnections([]);
       }
     });
@@ -139,6 +147,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     session,
     profile,
     modes,
+    events,
     connections,
     loading,
     refreshing,
@@ -197,6 +206,15 @@ export function SessionProvider({ children }: PropsWithChildren) {
         throw updateError;
       }
     },
+    activateEvent: async (eventId) => {
+      if (!supabase || !profile || !session) return;
+      setProfile({ ...profile, active_event_id: eventId });
+      const { error: updateError } = await supabase.from("profiles").update({ active_event_id: eventId, updated_at: new Date().toISOString() }).eq("id", profile.id);
+      if (updateError) {
+        await hydrate(session.user.id);
+        throw updateError;
+      }
+    },
     toggleFollowups: async () => {
       if (!supabase || !profile || !session) return;
       const enabled = !profile.followup_enabled;
@@ -230,7 +248,30 @@ export function SessionProvider({ children }: PropsWithChildren) {
       }
       await hydrate(session.user.id);
     },
-  }), [authCompleting, authError, connections, error, hydrate, loading, modes, profile, refreshing, session]);
+    saveEvent: async (eventId, input) => {
+      if (!supabase || !profile || !session) return;
+      const payload = { name: input.name.trim(), location: input.location.trim(), updated_at: new Date().toISOString() };
+      if (!payload.name || !payload.location) throw new Error("Event name and location are required.");
+      if (eventId) {
+        const { error: updateError } = await supabase.from("events").update(payload).eq("id", eventId).eq("profile_id", profile.id);
+        if (updateError) throw updateError;
+      } else {
+        const { data, error: insertError } = await supabase.from("events").insert({ ...payload, profile_id: profile.id }).select("id").single();
+        if (insertError || !data) throw insertError ?? new Error("Could not create this event.");
+        const { error: activateError } = await supabase.from("profiles").update({ active_event_id: data.id, updated_at: new Date().toISOString() }).eq("id", profile.id);
+        if (activateError) throw activateError;
+      }
+      await hydrate(session.user.id);
+    },
+    deleteEvent: async (eventId) => {
+      if (!supabase || !profile || !session) throw new Error("Sign in again to delete this event.");
+      if (profile.active_event_id === eventId) throw new Error("Activate another event before deleting this one.");
+      const { data, error: deleteError } = await supabase.from("events").delete().eq("id", eventId).eq("profile_id", profile.id).select("id");
+      if (deleteError) throw new Error("Could not delete this event. Please try again.");
+      if (!data?.length) throw new Error("This event is no longer available. Refresh and try again.");
+      await hydrate(session.user.id);
+    },
+  }), [authCompleting, authError, connections, error, events, hydrate, loading, modes, profile, refreshing, session]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
