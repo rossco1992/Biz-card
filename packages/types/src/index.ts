@@ -42,6 +42,8 @@ export type Profile = {
   website: string | null;
   followup_enabled: boolean;
   active_mode_id: string | null;
+  active_event_id: string | null;
+  email_signature: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -54,6 +56,16 @@ export type Mode = {
   delay_hours: number;
   subject_template: string;
   body_template: string;
+  include_signature: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Event = {
+  id: string;
+  profile_id: string;
+  name: string;
+  location: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -87,6 +99,9 @@ export type Connection = {
   phone: string | null;
   consent_at: string;
   mode_name_snapshot: string | null;
+  event_id: string | null;
+  event_name_snapshot: string | null;
+  event_location_snapshot: string | null;
   created_at: string;
   followups?: Pick<Followup, "status" | "send_at" | "sent_at" | "error">
     | Pick<Followup, "status" | "send_at" | "sent_at" | "error">[]
@@ -115,15 +130,24 @@ export type Database = {
       mailbox_oauth_states: RowShape<MailboxOAuthState, MailboxOAuthState, Partial<MailboxOAuthState>>;
       profiles: RowShape<
         Required<Profile>,
-        Omit<Profile, "id" | "active_mode_id" | "created_at" | "updated_at"> & Partial<Pick<Profile, "id" | "active_mode_id" | "created_at" | "updated_at">>,
+        Omit<Profile, "id" | "active_mode_id" | "active_event_id" | "email_signature" | "created_at" | "updated_at"> & Partial<Pick<Profile, "id" | "active_mode_id" | "active_event_id" | "email_signature" | "created_at" | "updated_at">>,
         Partial<Omit<Profile, "id" | "user_id">>,
-        [Relationship<"profiles_active_mode_fk", "active_mode_id", "modes">]
+        [
+          Relationship<"profiles_active_mode_fk", "active_mode_id", "modes">,
+          Relationship<"profiles_active_event_fk", "active_event_id", "events">
+        ]
       >;
       modes: RowShape<
         Required<Mode>,
-        Omit<Mode, "id" | "created_at" | "updated_at"> & Partial<Pick<Mode, "id" | "created_at" | "updated_at">>,
+        Omit<Mode, "id" | "include_signature" | "created_at" | "updated_at"> & Partial<Pick<Mode, "id" | "include_signature" | "created_at" | "updated_at">>,
         Partial<Omit<Mode, "id" | "profile_id">>,
         [Relationship<"modes_profile_id_fkey", "profile_id", "profiles">]
+      >;
+      events: RowShape<
+        Required<Event>,
+        Omit<Event, "id" | "created_at" | "updated_at"> & Partial<Pick<Event, "id" | "created_at" | "updated_at">>,
+        Partial<Omit<Event, "id" | "profile_id">>,
+        [Relationship<"events_profile_id_fkey", "profile_id", "profiles">]
       >;
       connections: RowShape<
         Omit<Connection, "followups">,
@@ -131,7 +155,8 @@ export type Database = {
         Partial<Omit<Connection, "id" | "profile_id" | "followups">>,
         [
           Relationship<"connections_profile_id_fkey", "profile_id", "profiles">,
-          Relationship<"connections_mode_id_fkey", "mode_id", "modes">
+          Relationship<"connections_mode_id_fkey", "mode_id", "modes">,
+          Relationship<"connections_event_id_fkey", "event_id", "events">
         ]
       >;
       followups: RowShape<
