@@ -20,6 +20,7 @@ export default function RootLayout() {
           <Stack.Screen name="email-connected" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="mode-editor" options={{ presentation: "modal" }} />
+          <Stack.Screen name="event-editor" options={{ presentation: "modal" }} />
         </Stack>
       </SessionProvider>
     </SafeAreaProvider>
