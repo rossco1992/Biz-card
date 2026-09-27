@@ -26,7 +26,7 @@ export default function ConnectionsScreen() {
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return connections;
-    return connections.filter((item) => `${item.first_name} ${item.last_name ?? ""} ${item.email} ${item.mode_name_snapshot ?? ""}`.toLowerCase().includes(needle));
+    return connections.filter((item) => `${item.first_name} ${item.last_name ?? ""} ${item.email} ${item.mode_name_snapshot ?? ""} ${item.event_name_snapshot ?? ""} ${item.event_location_snapshot ?? ""}`.toLowerCase().includes(needle));
   }, [connections, query]);
 
   return (
@@ -40,7 +40,7 @@ export default function ConnectionsScreen() {
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.accent} />}
         contentContainerStyle={styles.content}
-        ListHeaderComponent={<View style={styles.header}><PageHeader eyebrow={`${connections.length} total`} title="Connections" />{error ? <Notice tone="error">{error}</Notice> : null}<TextInput style={styles.search} placeholder="Search people, email, or mode" placeholderTextColor="#929A96" value={query} onChangeText={setQuery} autoCapitalize="none" /></View>}
+        ListHeaderComponent={<View style={styles.header}><PageHeader eyebrow={`${connections.length} total`} title="Connections" />{error ? <Notice tone="error">{error}</Notice> : null}<TextInput style={styles.search} placeholder="Search people, email, mode, or event" placeholderTextColor="#929A96" value={query} onChangeText={setQuery} autoCapitalize="none" /></View>}
         ListEmptyComponent={<EmptyState icon="↗" title={query ? "No matches" : "Your next hello starts here"} copy={query ? "Try a different name, email, or mode." : "New contacts appear here as soon as they scan your card and connect."} />}
         renderItem={({ item }) => {
           const status = statusFor(item);
@@ -50,7 +50,7 @@ export default function ConnectionsScreen() {
               <View style={styles.person}>
                 <Text style={styles.name}>{connectionName(item.first_name, item.last_name)}</Text>
                 <Text numberOfLines={1} style={styles.email}>{item.email}</Text>
-                <Text style={styles.meta}>{item.mode_name_snapshot || "No mode"} · {when(item.created_at)}</Text>
+                <Text style={styles.meta}>{item.event_name_snapshot ? `${item.event_name_snapshot} · ${item.event_location_snapshot || "Event"} · ${when(item.created_at)}` : `${item.mode_name_snapshot || "No mode"} · ${when(item.created_at)}`}</Text>
                 {getConnectionFollowup(item)?.status === "failed" ? <Text style={styles.meta}>{getConnectionFollowup(item)?.error || "Check your email connection."}</Text> : null}
               </View>
               <View style={[styles.status, status.tone === "success" && styles.success, status.tone === "danger" && styles.danger, status.tone === "scheduled" && styles.scheduled]}><Text style={styles.statusText}>{status.label}</Text></View>
