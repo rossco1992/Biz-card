@@ -151,7 +151,7 @@ export type Database = {
       >;
       connections: RowShape<
         Omit<Connection, "followups">,
-        Omit<Connection, "id" | "created_at" | "followups"> & Partial<Pick<Connection, "id" | "created_at">>,
+        Omit<Connection, "id" | "event_id" | "event_name_snapshot" | "event_location_snapshot" | "created_at" | "followups"> & Partial<Pick<Connection, "id" | "event_id" | "event_name_snapshot" | "event_location_snapshot" | "created_at">>,
         Partial<Omit<Connection, "id" | "profile_id" | "followups">>,
         [
           Relationship<"connections_profile_id_fkey", "profile_id", "profiles">,
