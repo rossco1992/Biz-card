@@ -10,10 +10,10 @@ export default function ModeEditor() {
   const { profile, modes, saveMode, deleteMode } = useSession();
   const mode = useMemo(() => modes.find((item) => item.id === modeId), [modeId, modes]);
   const creating = modeId === "new";
-  const [name, setName] = useState(mode?.name ?? "New mode");
-  const [delay, setDelay] = useState(String(mode?.delay_hours ?? 24));
-  const [subject, setSubject] = useState(mode?.subject_template ?? "Great meeting you");
-  const [body, setBody] = useState(mode?.body_template ?? "Hey {{first_name}} — it was great meeting you. I wanted to follow up while our conversation was still fresh.");
+  const [name, setName] = useState(mode?.name ?? "Event");
+  const [delay, setDelay] = useState(String(mode?.delay_hours ?? 48));
+  const [subject, setSubject] = useState(mode?.subject_template ?? "{{my_first_name}} from {{event_name}} — great meeting you");
+  const [body, setBody] = useState(mode?.body_template ?? "Hey {{first_name}} — {{my_first_name}} here. It was great meeting you at {{event_context}}. I wanted to follow up while our conversation was still fresh. Would love to stay connected.");
   const [includeSignature, setIncludeSignature] = useState(mode?.include_signature ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
