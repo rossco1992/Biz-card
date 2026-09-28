@@ -40,13 +40,14 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
   if (modesResult.error) throw modesResult.error;
   if (eventsResult.error) throw eventsResult.error;
   if (connectionsResult.error) throw connectionsResult.error;
-  if (subscriptionResult.error) throw subscriptionResult.error;
 
   return {
     profile,
     modes: modesResult.data ?? [],
     events: eventsResult.data ?? [],
     connections: connectionsResult.data ?? [],
-    subscription: subscriptionResult.data ?? null,
+    subscription: subscriptionResult.error
+      ? { plan: "free", source: "free", expires_at: null, revenuecat_status: "inactive", product_id: null, used: 0, limit: 5 }
+      : subscriptionResult.data ?? null,
   };
 }
