@@ -2,6 +2,7 @@ import { Brand } from "@/components/brand";
 import { ProfilePhotoSettings } from "@/components/profile-photo-settings";
 import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Notice, PageHeader, Screen, uiStyles } from "@/components/ui";
@@ -9,7 +10,7 @@ import { colors } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function SettingsScreen() {
-  const { profile, session, updateProfile, signOut } = useSession();
+  const { profile, session, subscription, updateProfile, signOut } = useSession();
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [company, setCompany] = useState(profile?.company ?? "");
   const [title, setTitle] = useState(profile?.title ?? "");
@@ -83,6 +84,22 @@ export default function SettingsScreen() {
         <Button variant="secondary" onPress={() => void WebBrowser.openBrowserAsync(cardUrl)}>Open public card</Button>
       </Card>
       <Card>
+        <View style={uiStyles.between}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Text style={uiStyles.sectionTitle}>Membership</Text>
+            <Text style={uiStyles.small}>
+              {subscription?.plan === "pro"
+                ? "KNCT Pro · Unlimited automatic follow-ups"
+                : `KNCT Free · ${subscription?.used ?? 0}/${subscription?.limit ?? 5} follow-ups used this month`}
+            </Text>
+          </View>
+          <View style={styles.planBadge}><Text style={styles.planBadgeText}>{subscription?.plan === "pro" ? "PRO" : "FREE"}</Text></View>
+        </View>
+        <Button variant={subscription?.plan === "pro" ? "secondary" : "primary"} onPress={() => router.push("/pro")}>
+          {subscription?.plan === "pro" ? "Manage Pro" : "Upgrade to Pro"}
+        </Button>
+      </Card>
+      <Card>
         <Text style={uiStyles.sectionTitle}>Account</Text>
         <View><Text style={styles.label}>Signed in as</Text><Text style={styles.value}>{session?.user.email}</Text></View>
         <View><Text style={styles.label}>Sending domain</Text><Text style={styles.value}>Managed in the web admin</Text></View>
@@ -95,4 +112,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   label: { color: colors.muted, fontSize: 11, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 },
   value: { color: colors.ink, fontSize: 14, lineHeight: 20 },
+  planBadge: { backgroundColor: colors.accentSoft, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6 },
+  planBadgeText: { color: colors.accent, fontSize: 10, fontWeight: "900", letterSpacing: 0.8 },
 });
