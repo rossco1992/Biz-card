@@ -142,3 +142,56 @@ npm run build
 ```
 
 Before inviting testers, complete one real-device flow: sign in, create a card, switch modes, scan the QR from a second phone, submit contact details, save the vCard, and confirm the scheduled follow-up appears in Connections.
+
+
+## Free / Pro subscriptions
+
+KNCT uses a server-enforced Free/Pro entitlement model.
+
+- **Free** — digital card, contact exchange, saved connections, and 5 automatic follow-ups per UTC calendar month.
+- **Pro** — unlimited automatic follow-ups.
+- **Target App Store / Play pricing** — $9.99 monthly or $79.99 annually.
+- **Trial** — configure a 7-day introductory free trial on both subscription products in App Store Connect / Google Play. RevenueCat automatically uses the store's eligible introductory offer when the user purchases.
+- **RevenueCat entitlement** — `pro`.
+- **RevenueCat offering** — create a current/default offering containing monthly and annual packages.
+
+Mobile builds need:
+
+```bash
+EXPO_PUBLIC_REVENUECAT_IOS_KEY=
+EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=
+```
+
+The web deployment needs:
+
+```bash
+REVENUECAT_WEBHOOK_AUTH=
+KNCT_ADMIN_TOKEN=
+```
+
+Configure a RevenueCat webhook to:
+
+```text
+https://YOUR_DOMAIN/api/webhooks/revenuecat
+```
+
+and set its Authorization header to `Bearer <REVENUECAT_WEBHOOK_AUTH>`.
+
+### Complimentary Pro
+
+For founders, testers, advisors, or friends who should receive Pro without purchasing, grant access through the protected admin endpoint. Example:
+
+```bash
+curl -X POST https://YOUR_DOMAIN/api/admin/pro \
+  -H "Authorization: Bearer $KNCT_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"slug":"their-knct-slug","days":365,"note":"Founding tester"}'
+```
+
+For permanent access use `"lifetime": true` instead of `days`. Send `DELETE` to the same endpoint with `{"slug":"their-knct-slug"}` to revoke the complimentary grant.
+
+On iOS the Pro screen also exposes Apple's native subscription offer-code redemption sheet. Create the actual offer codes in App Store Connect; purchases and redemptions sync back through RevenueCat.
+
+### Billing source of truth
+
+Store purchases are validated by RevenueCat and synced into `profile_entitlements`. The public connection API checks the entitlement server-side before scheduling each follow-up, so the Free limit cannot be bypassed by modifying the mobile client.

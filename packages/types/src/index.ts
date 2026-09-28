@@ -29,6 +29,45 @@ export type MailboxOAuthState = {
 };
 export type ModeKind = "everyday" | "event";
 
+export type RevenueCatStatus = "inactive" | "trialing" | "active" | "cancelled" | "billing_issue" | "expired" | "refunded";
+export type SubscriptionPlan = "free" | "pro";
+export type SubscriptionSource = "free" | "revenuecat" | "promotion" | "admin";
+export type SubscriptionAccess = {
+  plan: SubscriptionPlan;
+  source: SubscriptionSource;
+  expires_at: string | null;
+  revenuecat_status?: RevenueCatStatus;
+  product_id?: string | null;
+  used: number;
+  limit: number | null;
+};
+export type FollowupAllowance = {
+  allowed: boolean;
+  plan: SubscriptionPlan;
+  used: number | null;
+  limit: number | null;
+};
+export type ProfileEntitlement = {
+  profile_id: string;
+  revenuecat_status: RevenueCatStatus;
+  revenuecat_expires_at: string | null;
+  revenuecat_product_id: string | null;
+  revenuecat_provider: string | null;
+  promotion_expires_at: string | null;
+  promotion_label: string | null;
+  admin_lifetime: boolean;
+  admin_expires_at: string | null;
+  admin_note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type FollowupUsage = {
+  profile_id: string;
+  period_start: string;
+  used: number;
+  updated_at: string;
+};
+
 export type Profile = {
   id: string;
   user_id: string;
@@ -126,6 +165,8 @@ type RowShape<Row, Insert, Update, Relationships extends Relationship<string, st
 export type Database = {
   public: {
     Tables: {
+      profile_entitlements: RowShape<ProfileEntitlement, ProfileEntitlement, Partial<ProfileEntitlement>>;
+      followup_usage: RowShape<FollowupUsage, FollowupUsage, Partial<FollowupUsage>>;
       mailboxes: RowShape<Mailbox, Mailbox, Partial<Mailbox>>;
       mailbox_oauth_states: RowShape<MailboxOAuthState, MailboxOAuthState, Partial<MailboxOAuthState>>;
       profiles: RowShape<
@@ -172,6 +213,9 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      my_subscription_access: { Args: Record<string, never>; Returns: SubscriptionAccess };
+      profile_has_pro: { Args: { p_profile_id: string }; Returns: boolean };
+      consume_followup_allowance: { Args: { p_profile_id: string }; Returns: FollowupAllowance };
       finish_mailbox_connection: { Args: { p_confirmation_hash: string; p_profile_id: string }; Returns: undefined };
       disconnect_mailbox: { Args: { p_profile_id: string }; Returns: undefined };
       claim_mailbox_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
