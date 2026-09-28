@@ -7,7 +7,7 @@ import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function AutomationsScreen() {
-  const { profile, modes, toggleFollowups } = useSession();
+  const { profile, modes, subscription, toggleFollowups } = useSession();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   if (!profile) return null;
@@ -23,6 +23,14 @@ export default function AutomationsScreen() {
       <PageHeader eyebrow="Follow-up engine" title="Automations" />
       <Text style={uiStyles.body}>Choose what gets sent after someone connects. Your active mode follows your QR everywhere.</Text>
       {error ? <Notice tone="error">{error}</Notice> : null}
+      {subscription?.plan === "free" ? (
+        <Notice>
+          Free plan: {subscription.used}/{subscription.limit ?? 5} automatic follow-ups used this month.{" "}
+          <Text style={styles.upgradeLink} onPress={() => router.push("/pro")}>Upgrade to Pro</Text> for unlimited follow-ups.
+        </Notice>
+      ) : (
+        <Notice tone="success">KNCT Pro · Unlimited automatic follow-ups</Notice>
+      )}
       <ConnectedEmail />
       <Card>
         <View style={uiStyles.between}>
@@ -65,4 +73,5 @@ const styles = StyleSheet.create({
   active: { backgroundColor: colors.accentSoft, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3 },
   activeText: { color: colors.accent, fontSize: 9, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.7 },
   chevron: { color: colors.muted, fontSize: 26 },
+  upgradeLink: { color: colors.accent, fontWeight: "900" },
 });
