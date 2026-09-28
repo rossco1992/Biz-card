@@ -35,12 +35,13 @@ export default function ProScreen() {
 
   useEffect(() => {
     let active = true;
-    if (!session) return;
+    const billingUserId = session?.user.id;
+    if (!billingUserId) return;
     if (!revenueCatConfigured()) {
       setLoading(false);
       return;
     }
-    currentOffering(session.user.id)
+    currentOffering(billingUserId)
       .then((next) => {
         if (!active) return;
         setOffering(next);
@@ -53,13 +54,14 @@ export default function ProScreen() {
   }, [session?.user.id]);
 
   if (!session) return null;
+  const userId = userId;
   const isPro = subscription?.plan === "pro";
 
   async function purchase() {
     if (!selected) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      const info = await buyPackage(session.user.id, selected);
+      const info = await buyPackage(userId, selected);
       if (hasPro(info)) {
         setMessage("KNCT Pro is active.");
         await refresh();
@@ -74,7 +76,7 @@ export default function ProScreen() {
   async function restore() {
     setBusy(true); setError(""); setMessage("");
     try {
-      const info = await restorePurchases(session.user.id);
+      const info = await restorePurchases(userId);
       if (hasPro(info)) {
         setMessage("Your KNCT Pro purchase was restored.");
         await refresh();
@@ -88,8 +90,8 @@ export default function ProScreen() {
   async function redeem() {
     setBusy(true); setError(""); setMessage("");
     try {
-      await redeemOfferCode(session.user.id);
-      const info = await syncPurchases(session.user.id);
+      await redeemOfferCode(userId);
+      const info = await syncPurchases(userId);
       if (hasPro(info)) {
         setMessage("Offer redeemed. KNCT Pro is active.");
         await refresh();
