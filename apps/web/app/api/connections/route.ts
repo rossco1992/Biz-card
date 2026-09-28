@@ -78,10 +78,10 @@ export async function POST(request: Request) {
     if (ready) {
       const { data: allowance, error: allowanceError } = await supabase.rpc("consume_followup_allowance", { p_profile_id: profile.id });
       if (allowanceError) {
-        console.error("follow-up allowance check failed", allowanceError);
-        return NextResponse.json({ error: "Connection saved, but follow-up scheduling is unavailable." }, { status: 503 });
-      }
-      if (!allowance?.allowed) {
+        // Keep existing follow-ups working during the deploy window before
+        // migration 0006 is applied. Once installed, the server enforces Free limits.
+        console.error("follow-up allowance check unavailable; continuing without quota enforcement", allowanceError);
+      } else if (!allowance?.allowed) {
         return NextResponse.json({
           ok: true,
           scheduled_at: null,
