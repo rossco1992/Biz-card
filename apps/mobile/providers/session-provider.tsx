@@ -1,6 +1,6 @@
 import { defaultModes } from "@biz-card/core";
 import { loadOwnerWorkspace } from "@biz-card/supabase";
-import type { Connection, Event, Mode, Profile } from "@biz-card/types";
+import type { Connection, Event, Mode, Profile, SubscriptionAccess } from "@biz-card/types";
 import type { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import Constants, { ExecutionEnvironment } from "expo-constants";
@@ -20,6 +20,7 @@ type SessionContextValue = {
   modes: Mode[];
   events: Event[];
   connections: Connection[];
+  subscription: SubscriptionAccess | null;
   loading: boolean;
   refreshing: boolean;
   authCompleting: boolean;
@@ -48,6 +49,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [modes, setModes] = useState<Mode[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [subscription, setSubscription] = useState<SubscriptionAccess | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +67,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       setModes(workspace.modes as Mode[]);
       setEvents(workspace.events as Event[]);
       setConnections(workspace.connections as unknown as Connection[]);
+      setSubscription(workspace.subscription as SubscriptionAccess | null);
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "We couldn't refresh your card.");
@@ -127,6 +130,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         setModes([]);
         setEvents([]);
         setConnections([]);
+        setSubscription(null);
       }
     });
     const appStateSubscription = AppState.addEventListener("change", (state) => {
@@ -149,6 +153,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     modes,
     events,
     connections,
+    subscription,
     loading,
     refreshing,
     authCompleting,
@@ -271,7 +276,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       if (!data?.length) throw new Error("This event is no longer available. Refresh and try again.");
       await hydrate(session.user.id);
     },
-  }), [authCompleting, authError, connections, error, events, hydrate, loading, modes, profile, refreshing, session]);
+  }), [authCompleting, authError, connections, error, events, hydrate, loading, modes, profile, refreshing, session, subscription]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
