@@ -21,6 +21,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="mode-editor" options={{ presentation: "modal" }} />
           <Stack.Screen name="event-editor" options={{ presentation: "modal" }} />
+          <Stack.Screen name="pro" options={{ presentation: "modal" }} />
         </Stack>
       </SessionProvider>
     </SafeAreaProvider>
