@@ -54,7 +54,7 @@ export default function ProScreen() {
   }, [session?.user.id]);
 
   if (!session) return null;
-  const userId = userId;
+  const userId = session.user.id;
   const isPro = subscription?.plan === "pro";
 
   async function purchase() {
