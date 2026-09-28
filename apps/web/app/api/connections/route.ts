@@ -68,12 +68,30 @@ export async function POST(request: Request) {
   }
 
   let scheduledAt: string | null = null;
-  let followupStatus: "paused" | "scheduled" | "failed" = "paused";
+  let followupStatus: "paused" | "scheduled" | "failed" | "limit_reached" = "paused";
 
   if (profile.followup_enabled && mode) {
     const { data: mailbox, error: mailboxError } = await supabase.from("mailboxes").select("id,provider,status").eq("profile_id", profile.id).maybeSingle();
     if (mailboxError) return NextResponse.json({ error: "Connection saved, but email scheduling is unavailable." }, { status: 503 });
     const ready = mailbox?.status === "connected";
+
+    if (ready) {
+      const { data: allowance, error: allowanceError } = await supabase.rpc("consume_followup_allowance", { p_profile_id: profile.id });
+      if (allowanceError) {
+        console.error("follow-up allowance check failed", allowanceError);
+        return NextResponse.json({ error: "Connection saved, but follow-up scheduling is unavailable." }, { status: 503 });
+      }
+      if (!allowance?.allowed) {
+        return NextResponse.json({
+          ok: true,
+          scheduled_at: null,
+          followup_status: "limit_reached",
+          followup_limit: allowance?.limit ?? 5,
+          followup_used: allowance?.used ?? 5,
+        }, { status: 201 });
+      }
+    }
+
     const delayHours = Math.min(336, Math.max(1, mode.delay_hours ?? 24));
     scheduledAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
     const values = {
