@@ -8,6 +8,7 @@ import { completeAuthCallback, INVALID_LINK_MESSAGE, MOBILE_AUTH_REDIRECT } from
 import { AppState } from "react-native";
 import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { configurePurchases, revenueCatConfigured } from "@/lib/billing";
 
 type ProfileInput = Pick<Profile, "slug" | "full_name" | "company" | "title" | "email" | "phone" | "website">;
 type ModeInput = Pick<Mode, "name" | "delay_hours" | "subject_template" | "body_template" | "include_signature">;
@@ -95,6 +96,13 @@ export function SessionProvider({ children }: PropsWithChildren) {
       setAuthCompleting(false);
     }
   }, [hydrate]);
+
+  useEffect(() => {
+    if (!session?.user.id || !revenueCatConfigured()) return;
+    void configurePurchases(session.user.id).catch((cause) => {
+      if (__DEV__) console.warn("RevenueCat configuration failed", cause);
+    });
+  }, [session?.user.id]);
 
   useEffect(() => {
     const client = supabase;
