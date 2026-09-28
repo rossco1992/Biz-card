@@ -23,9 +23,9 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) return { profile: null, modes: [], events: [], connections: [] };
+  if (!profile) return { profile: null, modes: [], events: [], connections: [], subscription: null };
 
-  const [modesResult, eventsResult, connectionsResult] = await Promise.all([
+  const [modesResult, eventsResult, connectionsResult, subscriptionResult] = await Promise.all([
     client.from("modes").select("*").eq("profile_id", profile.id).order("created_at"),
     client.from("events").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
     client
@@ -34,16 +34,19 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
       .eq("profile_id", profile.id)
       .order("created_at", { ascending: false })
       .limit(100),
+    client.rpc("my_subscription_access"),
   ]);
 
   if (modesResult.error) throw modesResult.error;
   if (eventsResult.error) throw eventsResult.error;
   if (connectionsResult.error) throw connectionsResult.error;
+  if (subscriptionResult.error) throw subscriptionResult.error;
 
   return {
     profile,
     modes: modesResult.data ?? [],
     events: eventsResult.data ?? [],
     connections: connectionsResult.data ?? [],
+    subscription: subscriptionResult.data ?? null,
   };
 }
