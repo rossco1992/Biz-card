@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_WEB_URL } from "@biz-card/core";
+import { resolveWebUrl } from "@biz-card/core";
 import { supabase } from "@/lib/supabase";
 import { Button, Notice, Screen } from "@/components/ui";
 // Cold-start fallback when no browser auth session is waiting to receive this deep link.
@@ -15,7 +15,7 @@ export default function EmailConnected() {
       if (!receipt) throw new Error("Email connection was cancelled or expired.");
       const session = await supabase?.auth.getSession();
       if (!session?.data.session) throw new Error("Sign in to the Knct’d account that started this connection, then connect again.");
-      const base = (process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).replace(/\/$/, "");
+      const base = (resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL)).replace(/\/$/, "");
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 20000);
       try {

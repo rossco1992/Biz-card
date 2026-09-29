@@ -15,17 +15,21 @@
     "@biz-card/supabase": "*",
     "@biz-card/types": "*",
     "@supabase/supabase-js": "^2.57.4",
+    "html-to-text": "^10.0.1",
     "next": "^15.5.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "resend": "^6.0.2"
+    "resend": "^6.0.2",
+    "sanitize-html": "^2.17.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@types/html-to-text": "^9.0.4",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.5.2",
     "typescript": "^5.7.2"

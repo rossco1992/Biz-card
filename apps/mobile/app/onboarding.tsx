@@ -1,4 +1,4 @@
-import { DEFAULT_WEB_URL, slugify } from "@biz-card/core";
+import { resolveWebUrl, slugify } from "@biz-card/core";
 import { Redirect, router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
@@ -18,7 +18,7 @@ export default function Onboarding() {
   const [email, setEmail] = useState(session?.user.email ?? "");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
-  const cardHost = new URL(process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).host;
+  const cardHost = new URL(resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL)).host;
   const suggestedSlug = useMemo(() => slugify(slug || fullName), [fullName, slug]);
 
   function changeStep(next: number) {
@@ -33,7 +33,7 @@ export default function Onboarding() {
     setBusy(true);
     setError("");
     try {
-      await createProfile({ full_name: fullName.trim(), slug: suggestedSlug, company: company.trim(), title: title.trim(), email: email.trim(), phone: phone.trim() || null, website: website.trim() || null });
+      await createProfile({ full_name: fullName.trim(), slug: suggestedSlug, company: company.trim(), title: title.trim(), email: email.trim(), phone: phone.trim(), website: website.trim() || null });
       router.replace("/");
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "We couldn't create your card.";
@@ -64,9 +64,9 @@ export default function Onboarding() {
           <Text style={uiStyles.body}>Only the details you add here appear on your public card.</Text>
           <Card>
             <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-            <Field label="Phone (optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <Field label="Phone (required)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <Field label="Website (optional)" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="https://" />
-            <Button onPress={() => changeStep(2)} disabled={!email.trim()}>Continue</Button>
+            <Button onPress={() => changeStep(2)} disabled={!email.trim() || !phone.trim()}>Continue</Button>
             <Pressable onPress={() => changeStep(0)}><Text style={styles.back}>Back</Text></Pressable>
           </Card>
         </>
@@ -78,7 +78,7 @@ export default function Onboarding() {
             <Field label="Public card URL" value={slug} onChangeText={setSlug} autoCapitalize="none" autoCorrect={false} />
             <View style={styles.urlPreview}><Text style={styles.urlMuted}>{cardHost}/</Text><Text style={styles.urlStrong}>{suggestedSlug || "your-name"}</Text></View>
             {error ? <Notice tone="error">{error}</Notice> : null}
-            <Button onPress={() => void finish()} loading={busy} disabled={!suggestedSlug}>Create my card</Button>
+            <Button onPress={() => void finish()} loading={busy} disabled={!suggestedSlug || !phone.trim()}>Create my card</Button>
             <Pressable onPress={() => changeStep(1)}><Text style={styles.back}>Back</Text></Pressable>
           </Card>
         </>

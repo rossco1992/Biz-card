@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { validEmail } from "@/lib/mailbox-providers";
-import { appendEmailSignature, buildEventContext, firstNameFromFullName, mergeTemplate } from "@biz-card/core";
+import { buildEventContext, formatEventDate, firstNameFromFullName, mergeTemplate } from "@biz-card/core";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+import { renderSignedEmail } from "@/lib/email-signature";
 
 function clean(value: unknown, max = 200) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -101,11 +103,12 @@ export async function POST(request: Request) {
       my_first_name: firstNameFromFullName(profile.full_name),
       event_name: event?.name ?? "the event",
       event_location: event?.location ?? "",
+      event_date: formatEventDate(event?.event_date),
       event_context: buildEventContext(event?.name, event?.location),
     };
     const subject = mergeTemplate(mode.subject_template, values);
     const body = mergeTemplate(mode.body_template, values);
-    const text = appendEmailSignature(body, profile.email_signature, mode.include_signature);
+    const { text, html } = renderSignedEmail(body, profile.email_signature, profile.email_signature_html, mode.include_signature);
 
     const { data: followup, error: followupError } = await supabase
       .from("followups")
@@ -120,6 +123,7 @@ export async function POST(request: Request) {
         error: ready ? null : "Connect your Gmail or Outlook account to send follow-ups.",
         subject_snapshot: subject,
         body_snapshot: text,
+        body_html_snapshot: html,
         recipient_email: email,
       })
       .select("id")

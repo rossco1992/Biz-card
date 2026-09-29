@@ -1,3 +1,4 @@
+import { validEventDate } from "@biz-card/core";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -13,17 +14,21 @@ export default function EventEditor() {
   const active = profile?.active_event_id === event?.id;
   const [name, setName] = useState(event?.name ?? "");
   const [location, setLocation] = useState(event?.location ?? "");
+  const [date, setDate] = useState(event?.event_date ? `${event.event_date.slice(5, 7)}/${event.event_date.slice(8, 10)}/${event.event_date.slice(0, 4)}` : "");
+  const parts = date.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const isoDate = parts ? `${parts[3]}-${parts[1]}-${parts[2]}` : "";
+  const dateValid = !date.trim() || validEventDate(isoDate);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
 
   async function save() {
-    if (submitting.current || (!creating && !event)) return;
+    if (submitting.current || !dateValid || (!creating && !event)) return;
     submitting.current = true;
     setBusy(true);
     setError("");
     try {
-      await saveEvent(creating ? null : event?.id ?? null, { name, location });
+      await saveEvent(creating ? null : event?.id ?? null, { name, location, event_date: isoDate || null });
       router.back();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save this event.");
@@ -71,9 +76,11 @@ export default function EventEditor() {
       <Card>
         <Field label="Event name" value={name} onChangeText={setName} placeholder="SaaStr Annual 2026" />
         <Field label="Location" value={location} onChangeText={setLocation} placeholder="San Francisco, CA" />
-        <Notice>Follow-ups can use {"{{event_name}}"}, {"{{event_location}}"}, and {"{{event_context}}"} automatically.</Notice>
+        <Field label="Event date" value={date} onChangeText={setDate} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" maxLength={10} />
+        {!dateValid ? <Notice tone="error">Enter a valid date as MM/DD/YYYY.</Notice> : null}
+        <Notice>Add the event name, location, or date to your message using the field picker in your mode.</Notice>
         {error ? <Notice tone="error">{error}</Notice> : null}
-        <Button onPress={() => void save()} loading={busy} disabled={busy || !name.trim() || !location.trim() || (!creating && !event)}>Save event</Button>
+        <Button onPress={() => void save()} loading={busy} disabled={busy || !dateValid || !name.trim() || !location.trim() || (!creating && !event)}>Save event</Button>
       </Card>
 
       {!creating && event ? (

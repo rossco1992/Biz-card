@@ -1,4 +1,4 @@
-import { defaultModes } from "@biz-card/core";
+import { defaultModes, validEventDate } from "@biz-card/core";
 import { loadOwnerWorkspace } from "@biz-card/supabase";
 import type { Connection, Event, Mode, Profile, SubscriptionAccess } from "@biz-card/types";
 import type { Session } from "@supabase/supabase-js";
@@ -12,7 +12,7 @@ import { configurePurchases, revenueCatConfigured } from "@/lib/billing";
 
 type ProfileInput = Pick<Profile, "slug" | "full_name" | "company" | "title" | "email" | "phone" | "website">;
 type ModeInput = Pick<Mode, "name" | "delay_hours" | "subject_template" | "body_template" | "include_signature">;
-type EventInput = Pick<Event, "name" | "location">;
+type EventInput = Pick<Event, "name" | "location" | "event_date">;
 
 type SessionContextValue = {
   configured: boolean;
@@ -32,7 +32,7 @@ type SessionContextValue = {
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   createProfile: (input: ProfileInput) => Promise<void>;
-  updateProfile: (input: Partial<ProfileInput & Pick<Profile, "avatar_url" | "email_signature">>) => Promise<void>;
+  updateProfile: (input: Partial<ProfileInput & Pick<Profile, "avatar_url" | "email_signature" | "email_signature_html">>) => Promise<void>;
   activateMode: (modeId: string) => Promise<void>;
   activateEvent: (eventId: string) => Promise<void>;
   toggleFollowups: () => Promise<void>;
@@ -191,6 +191,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       if (session) await hydrate(session.user.id);
     },
     createProfile: async (input) => {
+      if (!input.phone?.trim()) throw new Error("Enter your phone number to create your card.");
       if (!supabase || !session) throw new Error("Sign in before creating a card.");
       const { data, error: profileError } = await supabase.from("profiles").insert({
         ...input,
@@ -205,6 +206,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       await hydrate(session.user.id);
     },
     updateProfile: async (input) => {
+      if ("phone" in input && !input.phone?.trim()) throw new Error("Phone number is required.");
       if (!supabase || !profile || !session) return;
       const { error: updateError } = await supabase.from("profiles").update({ ...input, updated_at: new Date().toISOString() }).eq("id", profile.id);
       if (updateError) throw updateError;
@@ -263,7 +265,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
     },
     saveEvent: async (eventId, input) => {
       if (!supabase || !profile || !session) return;
-      const payload = { name: input.name.trim(), location: input.location.trim(), updated_at: new Date().toISOString() };
+      if (input.event_date && !validEventDate(input.event_date)) throw new Error("Enter a valid event date.");
+      const payload = { name: input.name.trim(), location: input.location.trim(), event_date: input.event_date || null, updated_at: new Date().toISOString() };
       if (!payload.name || !payload.location) throw new Error("Event name and location are required.");
       if (eventId) {
         const { error: updateError } = await supabase.from("events").update(payload).eq("id", eventId).eq("profile_id", profile.id);

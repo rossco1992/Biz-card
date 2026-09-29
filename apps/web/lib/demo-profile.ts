@@ -10,6 +10,7 @@ export const demoProfile = {
   followup_enabled: true,
   active_mode_id: "demo-everyday",
   active_event_id: null,
+  email_signature_html: null,
   email_signature: "Ross Cohen\nConsultant · Nocos Consulting",
   active_event: null,
   active_mode: {

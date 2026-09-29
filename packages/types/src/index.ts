@@ -83,6 +83,7 @@ export type Profile = {
   active_mode_id: string | null;
   active_event_id: string | null;
   email_signature: string;
+  email_signature_html?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -105,6 +106,7 @@ export type Event = {
   profile_id: string;
   name: string;
   location: string;
+  event_date?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -121,6 +123,7 @@ export type Followup = {
   status: FollowupStatus;
   subject_snapshot: string;
   body_snapshot: string;
+  body_html_snapshot?: string | null;
   sent_at: string | null;
   provider_message_id: string | null;
   error: string | null;

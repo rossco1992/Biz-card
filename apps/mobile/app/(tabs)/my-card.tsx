@@ -1,7 +1,7 @@
 import { Brand } from "@/components/brand";
 import { router } from "expo-router";
 import { ProfilePhoto } from "@/components/profile-photo";
-import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
+import { resolveWebUrl, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
 import { useMemo, useState } from "react";
 import { Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
@@ -13,7 +13,7 @@ import { useSession } from "@/providers/session-provider";
 export default function MyCardScreen() {
   const { profile, modes, events, activateMode, activateEvent, refreshing, refresh, error } = useSession();
   const [switching, setSwitching] = useState("");
-  const webUrl = process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL;
+  const webUrl = resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL);
   const cardUrl = profile ? publicCardUrl(profile.slug, webUrl) : webUrl;
   const activeMode = useMemo(() => modes.find((mode) => mode.id === profile?.active_mode_id) ?? modes[0], [modes, profile]);
   const activeEvent = useMemo(() => events.find((event) => event.id === profile?.active_event_id) ?? null, [events, profile?.active_event_id]);
