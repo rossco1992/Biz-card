@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { sanitizeSignature } from "./email-signature";
 import { digest } from "./mailbox-crypto";
 export type MailProvider = "google" | "microsoft";
 export const isMailProvider = (value: unknown): value is MailProvider => value === "google" || value === "microsoft";
@@ -60,7 +62,7 @@ export async function mailboxIdentity(provider: MailProvider, token: string) {
   if (!validEmail(email)) throw new ProviderFailure();
   return email.toLowerCase();
 }
-export function gmailMessage(from: string, to: string, subject: string, text: string) {
+export function gmailMessage(from: string, to: string, subject: string, text: string, html?: string | null) {
   if (!validEmail(from) || !validEmail(to) || /[\r\n]/.test(subject)) throw new Error("Invalid email headers.");
   // Fold long encoded subjects and base64 body lines to stay within MIME limits.
   const chunks: string[] = [];
@@ -72,13 +74,18 @@ export function gmailMessage(from: string, to: string, subject: string, text: st
   if (chunk) chunks.push(chunk);
   const words = chunks.map(part => `=?UTF-8?B?${Buffer.from(part).toString("base64")}?=`).join("\r\n ");
   const body = Buffer.from(text).toString("base64").match(/.{1,76}/g)?.join("\r\n") || "";
+  if (html) {
+    const boundary = `knct-${randomUUID()}`;
+    const rich = Buffer.from(sanitizeSignature(html)).toString("base64").match(/.{1,76}/g)?.join("\r\n") || "";
+    return Buffer.from([`From: ${from}`, `To: ${to}`, `Subject: ${words}`, "MIME-Version: 1.0", `Content-Type: multipart/alternative; boundary="${boundary}"`, "", `--${boundary}`, 'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", body, `--${boundary}`, 'Content-Type: text/html; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", rich, `--${boundary}--`, ""].join("\r\n")).toString("base64url");
+  }
   return Buffer.from([`From: ${from}`, `To: ${to}`, `Subject: ${words}`, "MIME-Version: 1.0", 'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", body].join("\r\n")).toString("base64url");
 }
-export async function sendMailboxMessage(provider: MailProvider, token: string, message: { from: string; to: string; subject: string; text: string }): Promise<string | null> {
+export async function sendMailboxMessage(provider: MailProvider, token: string, message: { from: string; to: string; subject: string; text: string; html?: string | null }): Promise<string | null> {
   if (!validEmail(message.from) || !validEmail(message.to) || /[\r\n]/.test(message.subject)) throw new Error("Invalid email headers.");
   const google = provider === "google";
-  const body = google ? { raw: gmailMessage(message.from, message.to, message.subject, message.text) } : {
-    message: { subject: message.subject, body: { contentType: "Text", content: message.text }, toRecipients: [{ emailAddress: { address: message.to } }] }, saveToSentItems: true,
+  const body = google ? { raw: gmailMessage(message.from, message.to, message.subject, message.text, message.html) } : {
+    message: { subject: message.subject, body: { contentType: message.html ? "HTML" : "Text", content: message.html ? sanitizeSignature(message.html) : message.text }, toRecipients: [{ emailAddress: { address: message.to } }] }, saveToSentItems: true,
   };
   const response = await fetch(google ? "https://gmail.googleapis.com/gmail/v1/users/me/messages/send" : "https://graph.microsoft.com/v1.0/me/sendMail", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000),

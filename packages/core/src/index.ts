@@ -1,5 +1,18 @@
 export const DEFAULT_WEB_URL = "https://www.getknctd.com";
 
+/** Retire the original hosting address while preserving development overrides. */
+export function resolveWebUrl(configured?: string): string {
+  const value = configured?.trim() || DEFAULT_WEB_URL;
+  try {
+    const url = new URL(value);
+    if (url.hostname === "bizcard-nu.vercel.app") return DEFAULT_WEB_URL;
+    if (!["https:", "http:"].includes(url.protocol)) return DEFAULT_WEB_URL;
+    return value.replace(/\/+$/, "");
+  } catch {
+    return DEFAULT_WEB_URL;
+  }
+}
+
 /** Unique connection_id makes this a to-one join; tolerate older array payloads. */
 export function getConnectionFollowup<T extends object>(
   connection: { followups?: T | T[] | null },
@@ -81,3 +94,15 @@ export const defaultModes = (profileId: string) => [
     include_signature: true,
   },
 ];
+
+/** Calendar dates stay in UTC for formatting so they never shift a day. */
+export function validEventDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function formatEventDate(value?: string | null): string {
+  if (!value || !validEventDate(value)) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));
+}

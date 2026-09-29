@@ -1,6 +1,7 @@
+import { HtmlSignatureImport } from "@/components/html-signature-import";
 import { Brand } from "@/components/brand";
 import { ProfilePhotoSettings } from "@/components/profile-photo-settings";
-import { DEFAULT_WEB_URL, publicCardUrl } from "@biz-card/core";
+import { resolveWebUrl, publicCardUrl } from "@biz-card/core";
 import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -31,7 +32,7 @@ export default function SettingsScreen() {
   async function save() {
     setBusy(true); setMessage(""); setError("");
     try {
-      await updateProfile({ full_name: fullName.trim(), company: company.trim(), title: title.trim(), email: email.trim(), phone: phone.trim() || null, website: website.trim() || null });
+      await updateProfile({ full_name: fullName.trim(), company: company.trim(), title: title.trim(), email: email.trim(), phone: phone.trim(), website: website.trim() || null });
       setMessage("Profile saved.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your profile."); }
     finally { setBusy(false); }
@@ -40,7 +41,7 @@ export default function SettingsScreen() {
   async function saveSignature() {
     setSignatureBusy(true); setMessage(""); setError("");
     try {
-      await updateProfile({ email_signature: signature.trim() });
+      await updateProfile({ email_signature: signature.trim(), email_signature_html: null });
       setMessage("Email signature saved. It will be added to modes that have signatures enabled.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your email signature."); }
     finally { setSignatureBusy(false); }
@@ -53,7 +54,7 @@ export default function SettingsScreen() {
     ]);
   }
 
-  const cardUrl = publicCardUrl(profile.slug, process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL);
+  const cardUrl = publicCardUrl(profile.slug, resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL));
   return (
     <Screen>
       <Brand />
@@ -66,15 +67,17 @@ export default function SettingsScreen() {
         <Field label="Company" value={company} onChangeText={setCompany} />
         <Field label="Title" value={title} onChangeText={setTitle} />
         <Field label="Public email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <Field label="Phone (required)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <Field label="Website" value={website} onChangeText={setWebsite} keyboardType="url" autoCapitalize="none" />
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
-        <Button onPress={() => void save()} loading={busy} disabled={!fullName.trim() || !email.trim()}>Save changes</Button>
+        <Button onPress={() => void save()} loading={busy} disabled={!fullName.trim() || !email.trim() || !phone.trim()}>Save changes</Button>
       </Card>
       <Card>
         <Text style={uiStyles.sectionTitle}>Email signature</Text>
         <Text style={uiStyles.small}>Set this once. KNCT adds it to every follow-up mode where “Include my signature” is on.</Text>
+        <HtmlSignatureImport />
+        {profile.email_signature_html ? <Text style={uiStyles.small}>An HTML signature is active. Saving the text below replaces its formatting.</Text> : null}
         <Field label="Signature" value={signature} onChangeText={setSignature} multiline placeholder={"Your name\nTitle · Company\nPhone or LinkedIn"} />
         <Button onPress={() => void saveSignature()} loading={signatureBusy} disabled={signatureBusy}>Save signature</Button>
       </Card>

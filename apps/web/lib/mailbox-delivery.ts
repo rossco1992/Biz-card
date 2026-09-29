@@ -1,6 +1,6 @@
 import type { Mailbox } from "@biz-card/types";
 import { ProviderFailure } from "./mailbox-providers";
-export type DeliveryJob = { id: string; profile_id: string; mailbox_id: string | null; delivery_provider: string; recipient_email: string; subject_snapshot: string; body_snapshot: string };
+export type DeliveryJob = { id: string; profile_id: string; mailbox_id: string | null; delivery_provider: string; recipient_email: string; subject_snapshot: string; body_snapshot: string; body_html_snapshot?: string | null };
 export type DeliveryResult = { status: "sent" | "failed" | "cancelled"; error: string | null; provider_message_id?: string | null; sent_at?: string };
 export type DeliveryDependencies = {
   load: (profileId: string) => Promise<{ enabled: boolean; mailbox: Mailbox | null }>;

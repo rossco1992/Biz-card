@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { Alert, AppState, Text } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { DEFAULT_WEB_URL } from "@biz-card/core";
+import { resolveWebUrl } from "@biz-card/core";
 import type { MailboxStatus, MailProvider } from "@biz-card/types";
 import { supabase } from "@/lib/supabase";
 import { Button, Card, Notice, uiStyles } from "@/components/ui";
@@ -15,7 +15,7 @@ export function ConnectedEmail() {
   const [refreshing, setRefreshing] = useState(true);
   const refreshVersion = useRef(0);
   const inFlight = useRef(false);
-  const base = (process.env.EXPO_PUBLIC_WEB_URL || DEFAULT_WEB_URL).replace(/\/$/, "");
+  const base = (resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL)).replace(/\/$/, "");
   const api = useCallback(async (path = "", method = "GET", body?: object) => {
     const session = await supabase?.auth.getSession();
     if (!session?.data.session) throw new Error("Sign in again to connect your email.");

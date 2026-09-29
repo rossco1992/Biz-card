@@ -44,7 +44,7 @@ export async function GET(request: Request) {
           return current.data?.id === mailbox.id && current.data.status === "connected" && profile.data?.followup_enabled === true;
         },
         async send(mailbox, token, job) {
-          return sendMailboxMessage(mailbox.provider, token, { from: mailbox.email, to: job.recipient_email, subject: job.subject_snapshot, text: job.body_snapshot });
+          return sendMailboxMessage(mailbox.provider, token, { from: mailbox.email, to: job.recipient_email, subject: job.subject_snapshot, text: job.body_snapshot, html: job.body_html_snapshot });
         },
         async reconnect(mailbox) {
           const { error } = await db.from("mailboxes").update({ status: "reconnect", updated_at: new Date().toISOString() }).eq("profile_id", mailbox.profile_id).eq("id", mailbox.id);

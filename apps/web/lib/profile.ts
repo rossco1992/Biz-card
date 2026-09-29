@@ -10,7 +10,7 @@ export async function getPublicProfile(slug: string) {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id,slug,avatar_url,full_name,company,title,email,phone,website,followup_enabled,active_mode_id,active_event_id,email_signature")
+    .select("id,slug,avatar_url,full_name,company,title,email,phone,website,followup_enabled,active_mode_id,active_event_id,email_signature,email_signature_html")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -30,7 +30,7 @@ export async function getPublicProfile(slug: string) {
   if (profile.active_event_id) {
     const { data } = await supabase
       .from("events")
-      .select("id,name,location")
+      .select("id,name,location,event_date")
       .eq("id", profile.active_event_id)
       .maybeSingle();
     activeEvent = data;
