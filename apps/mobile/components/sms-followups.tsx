@@ -23,6 +23,7 @@ export function SmsFollowups() {
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(true);
   const [error, setError] = useState("");
+  const [testMessage, setTestMessage] = useState("");
   const inFlight = useRef(false);
   const base = resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL).replace(/\/$/, "");
 
@@ -60,6 +61,33 @@ export function SmsFollowups() {
   useFocusEffect(useCallback(() => {
     void refresh();
   }, [refresh]));
+
+  async function sendTest() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError("");
+    setTestMessage("");
+    try {
+      const session = await supabase?.auth.getSession();
+      if (!session?.data.session) throw new Error("Sign in again to test texting.");
+      const response = await fetch(`${base}/api/sms/test`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result) throw new Error(result?.error || "Could not send the test text.");
+      setTestMessage(`Test text sent to ${result.to}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not send the test text.");
+    } finally {
+      setBusy(false);
+      inFlight.current = false;
+    }
+  }
 
   async function act(action: "request" | "enable" | "disable") {
     if (inFlight.current) return;
@@ -123,6 +151,9 @@ export function SmsFollowups() {
           >
             {data?.enabled ? "Pause text follow-ups" : "Enable text follow-ups"}
           </Button>
+          <Button variant="secondary" disabled={busy || data?.provider_configured === false} onPress={() => void sendTest()}>
+            Send test text to me
+          </Button>
         </>
       ) : null}
 
@@ -137,6 +168,7 @@ export function SmsFollowups() {
         <Notice>Text delivery is temporarily unavailable. Your number remains assigned to your KNCT account.</Notice>
       ) : null}
 
+      {testMessage ? <Notice tone="success">{testMessage}</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
       <Button variant="secondary" disabled={busy || refreshing} loading={refreshing} onPress={() => void refresh()}>
         Refresh texting status
