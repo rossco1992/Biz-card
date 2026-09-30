@@ -198,7 +198,7 @@ export type Database = {
       mailbox_oauth_states: RowShape<MailboxOAuthState, MailboxOAuthState, Partial<MailboxOAuthState>>;
       profiles: RowShape<
         Required<Profile>,
-        Omit<Profile, "id" | "active_mode_id" | "active_event_id" | "email_signature" | "created_at" | "updated_at"> & Partial<Pick<Profile, "id" | "active_mode_id" | "active_event_id" | "email_signature" | "created_at" | "updated_at">>,
+        Omit<Profile, "id" | "active_mode_id" | "active_event_id" | "email_signature" | "sms_followup_enabled" | "created_at" | "updated_at"> & Partial<Pick<Profile, "id" | "active_mode_id" | "active_event_id" | "email_signature" | "sms_followup_enabled" | "created_at" | "updated_at">>,
         Partial<Omit<Profile, "id" | "user_id">>,
         [
           Relationship<"profiles_active_mode_fk", "active_mode_id", "modes">,
