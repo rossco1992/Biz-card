@@ -1,5 +1,5 @@
 import { connectionName, getConnectionFollowupByChannel } from "@biz-card/core";
-import type { Connection } from "@biz-card/types";
+import type { Connection, Followup } from "@biz-card/types";
 import { useMemo, useState } from "react";
 import { FlatList, Platform, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState, KeyboardFrame, Notice, PageHeader } from "@/components/ui";
@@ -10,7 +10,7 @@ function when(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
-function statusFor(followup: ReturnType<typeof getConnectionFollowupByChannel>) {
+function statusFor(followup: Pick<Followup, "status" | "send_at" | "sent_at" | "error" | "channel"> | undefined) {
   if (!followup) return null;
   if (followup.status === "sent") return { label: "Sent", tone: "success" };
   if (followup.status === "sending") return { label: "Sending", tone: "scheduled" };
