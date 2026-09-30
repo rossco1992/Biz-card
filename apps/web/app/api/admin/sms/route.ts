@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { SmsSenderStatus } from "@biz-card/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,8 +22,8 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const slug = clean(body?.slug, 80).toLowerCase();
-  const nextStatus = clean(body?.status, 30);
-  const allowed = new Set(["requested", "pending", "approved", "rejected", "suspended"]);
+  const nextStatus = clean(body?.status, 30) as SmsSenderStatus;
+  const allowed = new Set<SmsSenderStatus>(["requested", "pending", "approved", "rejected", "suspended"]);
   if (!slug || !allowed.has(nextStatus)) {
     return NextResponse.json({ error: "Provide a KNCT slug and a valid sender status." }, { status: 400 });
   }
