@@ -17,7 +17,8 @@ Twilio Messaging Services choose the actual sender from their sender pool. For U
 
 ## Production prerequisites
 
-- Apply `supabase/migrations/0009_sms_followups.sql`.
+- Apply `supabase/migrations/0009_sms_followups.sql` and `supabase/migrations/0010_pro_plus_sms_entitlement.sql` in order.
+- In RevenueCat, create/attach entitlement id `pro_plus` to the products that include SMS. Plain `pro` products do not unlock Twilio usage.
 - Run `supabase/operations/check_sms_followups.sql` and confirm all migration checks return true.
 - Add server-only Vercel environment variables:
   - `TWILIO_ACCOUNT_SID`
