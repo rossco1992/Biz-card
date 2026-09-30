@@ -48,7 +48,7 @@ export type SmsSender = {
 };
 
 export type RevenueCatStatus = "inactive" | "trialing" | "active" | "cancelled" | "billing_issue" | "expired" | "refunded";
-export type SubscriptionPlan = "free" | "pro";
+export type SubscriptionPlan = "free" | "pro" | "pro_plus";
 export type SubscriptionSource = "free" | "revenuecat" | "promotion" | "admin";
 export type SubscriptionAccess = {
   plan: SubscriptionPlan;
@@ -56,6 +56,7 @@ export type SubscriptionAccess = {
   expires_at: string | null;
   revenuecat_status?: RevenueCatStatus;
   product_id?: string | null;
+  sms_access: boolean;
   used: number;
   limit: number | null;
 };
@@ -71,11 +72,15 @@ export type ProfileEntitlement = {
   revenuecat_expires_at: string | null;
   revenuecat_product_id: string | null;
   revenuecat_provider: string | null;
+  revenuecat_entitlement_ids: string[];
   promotion_expires_at: string | null;
   promotion_label: string | null;
   admin_lifetime: boolean;
   admin_expires_at: string | null;
   admin_note: string | null;
+  sms_admin_lifetime: boolean;
+  sms_admin_expires_at: string | null;
+  sms_admin_note: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -243,6 +248,7 @@ export type Database = {
     Functions: {
       my_subscription_access: { Args: Record<string, never>; Returns: SubscriptionAccess };
       profile_has_pro: { Args: { p_profile_id: string }; Returns: boolean };
+      profile_has_sms: { Args: { p_profile_id: string }; Returns: boolean };
       consume_followup_allowance: { Args: { p_profile_id: string }; Returns: FollowupAllowance };
       finish_mailbox_connection: { Args: { p_confirmation_hash: string; p_profile_id: string }; Returns: undefined };
       disconnect_mailbox: { Args: { p_profile_id: string }; Returns: undefined };
