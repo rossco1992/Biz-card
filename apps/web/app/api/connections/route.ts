@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   const phone = clean(body.phone, 40);
   const consent = body.consent === true;
   const smsConsent = body.sms_consent === true;
+  const normalizedPhone = normalizeNorthAmericanPhone(phone);
 
   if (!slug || !firstName || !email || !consent) {
     return NextResponse.json({ error: "First name, email, and consent are required." }, { status: 400 });
@@ -28,6 +29,9 @@ export async function POST(request: Request) {
 
   if (!validEmail(email)) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  }
+  if (smsConsent && !normalizedPhone) {
+    return NextResponse.json({ error: "Enter a valid mobile number to receive the text follow-up." }, { status: 400 });
   }
 
   const profile = await getPublicProfile(slug);
@@ -55,9 +59,9 @@ export async function POST(request: Request) {
       first_name: firstName,
       last_name: lastName || null,
       email,
-      phone: phone || null,
+      phone: normalizedPhone || phone || null,
       consent_at: new Date().toISOString(),
-      sms_consent_at: smsConsent && phone ? new Date().toISOString() : null,
+      sms_consent_at: smsConsent && normalizedPhone ? new Date().toISOString() : null,
       mode_name_snapshot: mode?.name ?? null,
       event_id: event?.id ?? null,
       event_name_snapshot: event?.name ?? null,
@@ -145,9 +149,9 @@ export async function POST(request: Request) {
   let smsScheduledAt: string | null = null;
   let smsFollowupStatus: "paused" | "scheduled" | "failed" = "paused";
 
-  if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && phone && smsConsent) {
-    const recipientPhone = normalizeNorthAmericanPhone(phone);
-    if (recipientPhone) {
+  if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && normalizedPhone && smsConsent) {
+    const recipientPhone = normalizedPhone;
+    {
       const [{ data: hasPro, error: proError }, { data: sender, error: senderError }] = await Promise.all([
         supabase.rpc("profile_has_pro", { p_profile_id: profile.id }),
         supabase
