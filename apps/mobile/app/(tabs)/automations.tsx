@@ -49,7 +49,7 @@ export default function AutomationsScreen() {
               <View style={styles.icon}><Text style={styles.iconText}>{mode.kind === "everyday" ? "☀︎" : "✦"}</Text></View>
               <View style={styles.modeCopy}>
                 <View style={styles.modeTitleRow}><Text style={styles.modeName}>{mode.name}</Text>{active ? <View style={styles.active}><Text style={styles.activeText}>Active</Text></View> : null}</View>
-                <Text style={uiStyles.small}>Wait {mode.delay_hours}h · {mode.subject_template}</Text>
+                <Text style={uiStyles.small}>{mode.sms_enabled ? "Email + text" : "Email"} · Wait {mode.delay_hours}h · {mode.subject_template}</Text>
               </View>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
