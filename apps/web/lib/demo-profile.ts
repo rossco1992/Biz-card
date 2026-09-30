@@ -8,6 +8,7 @@ export const demoProfile = {
   phone: "+1 212 555 0123",
   website: "https://example.com",
   followup_enabled: true,
+  sms_followup_enabled: false,
   active_mode_id: "demo-everyday",
   active_event_id: null,
   email_signature_html: null,
@@ -21,6 +22,8 @@ export const demoProfile = {
     subject_template: "Great meeting you",
     body_template: "Hey {{first_name}} — great meeting you yesterday. Wanted to follow up while our conversation was still fresh. If it'd be useful to keep talking, happy to find some time.",
     include_signature: true,
+    sms_enabled: false,
+    sms_body_template: null,
   },
 };
 
