@@ -14,7 +14,7 @@ type SmsStatus = {
     approved_at: string | null;
   } | null;
   enabled: boolean;
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "pro_plus";
   provider_configured: boolean;
 };
 
@@ -113,14 +113,14 @@ export function SmsFollowups() {
         Send the same KNCT follow-up by SMS from a dedicated KNCT number. Recipients never need an account, and you never need a separate texting-service login.
       </Text>
 
-      {data?.plan === "free" ? (
+      {data?.plan !== "pro_plus" ? (
         <>
-          <Notice>Text follow-ups are a KNCT Pro feature.</Notice>
-          <Button onPress={() => router.push("/pro")}>Upgrade to Pro</Button>
+          <Notice>Automatic text follow-ups are included with KNCT Pro+.</Notice>
+          <Button onPress={() => router.push("/pro")}>{data?.plan === "pro" ? "Upgrade to Pro+" : "View Pro+ plans"}</Button>
         </>
       ) : null}
 
-      {data?.plan === "pro" && !sender ? (
+      {data?.plan === "pro_plus" && !sender ? (
         <>
           <Text style={uiStyles.small}>
             Texting numbers require carrier registration before automatic messages can send. Start here and KNCT keeps the setup tied to your account.
