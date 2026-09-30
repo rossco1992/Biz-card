@@ -29,6 +29,7 @@ type SessionContextValue = {
   error: string;
   clearError: () => void;
   sendMagicLink: (email: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   createProfile: (input: ProfileInput) => Promise<void>;
@@ -180,6 +181,16 @@ export function SessionProvider({ children }: PropsWithChildren) {
         console.log("Sign-in redirect:", redirectTo);
       }
       const { error: authError } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: redirectTo } });
+      if (authError) throw authError;
+    },
+    signInWithPassword: async (email, password) => {
+      if (!supabase) throw new Error("Supabase is not configured.");
+      setError("");
+      setAuthError("");
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
       if (authError) throw authError;
     },
     signOut: async () => {
