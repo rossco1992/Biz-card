@@ -133,7 +133,7 @@ test("real SQL: SMS queue serializes each owner and never auto-retries ambiguous
 
     const stale = (await db.query("select status,error from followups where id=$1", [second])).rows[0];
     assert.equal(stale.status, "failed");
-    assert.match(stale.error, /Twilio message logs/);
+    assert.match(stale.error, /Twilio delivery logs/);
     assert.equal((await db.query("select status from followups where id=$1", [future])).rows[0].status, "scheduled");
 
     for (const role of ["anon", "authenticated"]) {
