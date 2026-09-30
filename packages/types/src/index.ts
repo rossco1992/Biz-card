@@ -1,4 +1,6 @@
 export type FollowupStatus = "scheduled" | "sending" | "sent" | "cancelled" | "failed";
+export type FollowupChannel = "email" | "sms";
+export type SmsSenderStatus = "requested" | "pending" | "approved" | "rejected" | "suspended";
 export type MailProvider = "google" | "microsoft";
 export type Mailbox = {
   profile_id: string;
@@ -28,6 +30,22 @@ export type MailboxOAuthState = {
   confirmed_mailbox_id: string | null;
 };
 export type ModeKind = "everyday" | "event";
+
+export type SmsSender = {
+  profile_id: string;
+  id: string;
+  status: SmsSenderStatus;
+  phone_number: string | null;
+  twilio_subaccount_sid: string | null;
+  messaging_service_sid: string | null;
+  phone_number_sid: string | null;
+  brand_sid: string | null;
+  campaign_sid: string | null;
+  status_detail: string | null;
+  requested_at: string;
+  approved_at: string | null;
+  updated_at: string;
+};
 
 export type RevenueCatStatus = "inactive" | "trialing" | "active" | "cancelled" | "billing_issue" | "expired" | "refunded";
 export type SubscriptionPlan = "free" | "pro";
@@ -80,6 +98,7 @@ export type Profile = {
   phone: string | null;
   website: string | null;
   followup_enabled: boolean;
+  sms_followup_enabled: boolean;
   active_mode_id: string | null;
   active_event_id: string | null;
   email_signature: string;
@@ -97,6 +116,8 @@ export type Mode = {
   subject_template: string;
   body_template: string;
   include_signature: boolean;
+  sms_enabled: boolean;
+  sms_body_template: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -112,13 +133,15 @@ export type Event = {
 };
 
 export type Followup = {
-  delivery_provider?: "resend" | "unconnected" | MailProvider;
+  delivery_provider?: "resend" | "unconnected" | "twilio" | MailProvider;
+  channel: FollowupChannel;
   mailbox_id?: string | null;
   id: string;
   connection_id: string;
   profile_id: string;
   mode_id: string | null;
-  recipient_email: string;
+  recipient_email: string | null;
+  recipient_phone: string | null;
   send_at: string;
   status: FollowupStatus;
   subject_snapshot: string;
@@ -145,8 +168,8 @@ export type Connection = {
   event_name_snapshot: string | null;
   event_location_snapshot: string | null;
   created_at: string;
-  followups?: Pick<Followup, "status" | "send_at" | "sent_at" | "error">
-    | Pick<Followup, "status" | "send_at" | "sent_at" | "error">[]
+  followups?: Pick<Followup, "channel" | "status" | "send_at" | "sent_at" | "error">
+    | Pick<Followup, "channel" | "status" | "send_at" | "sent_at" | "error">[]
     | null;
 };
 
@@ -170,6 +193,7 @@ export type Database = {
     Tables: {
       profile_entitlements: RowShape<ProfileEntitlement, ProfileEntitlement, Partial<ProfileEntitlement>>;
       followup_usage: RowShape<FollowupUsage, FollowupUsage, Partial<FollowupUsage>>;
+      sms_senders: RowShape<SmsSender, Partial<SmsSender> & Pick<SmsSender, "profile_id">, Partial<SmsSender>>;
       mailboxes: RowShape<Mailbox, Mailbox, Partial<Mailbox>>;
       mailbox_oauth_states: RowShape<MailboxOAuthState, MailboxOAuthState, Partial<MailboxOAuthState>>;
       profiles: RowShape<
@@ -222,6 +246,7 @@ export type Database = {
       finish_mailbox_connection: { Args: { p_confirmation_hash: string; p_profile_id: string }; Returns: undefined };
       disconnect_mailbox: { Args: { p_profile_id: string }; Returns: undefined };
       claim_mailbox_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
+      claim_sms_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
