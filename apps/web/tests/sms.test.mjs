@@ -57,7 +57,7 @@ test("Twilio provider errors do not leak provider details into the delivery resu
 
   const job = { id: "job", profile_id: "profile", recipient_phone: "+17325550123", body_snapshot: "Hello" };
   const result = await deliverSmsJob(job, {
-    load: async () => ({ followupsEnabled: true, smsEnabled: true, hasPro: true, sender }),
+    load: async () => ({ followupsEnabled: true, smsEnabled: true, hasSmsAccess: true, sender }),
     stillReady: async () => true,
     send: async () => twilio.sendTwilioSms(sender, job.recipient_phone, job.body_snapshot),
   });
@@ -67,11 +67,11 @@ test("Twilio provider errors do not leak provider details into the delivery resu
   globalThis.fetch = originalFetch;
 });
 
-test("SMS delivery suppresses paused, non-Pro, unapproved, and changed senders", async () => {
+test("SMS delivery suppresses paused, non-Pro+, unapproved, and changed senders", async () => {
   const job = { id: "job", profile_id: "profile", recipient_phone: "+17325550123", body_snapshot: "Hello" };
   let sends = 0;
   const base = {
-    load: async () => ({ followupsEnabled: true, smsEnabled: true, hasPro: true, sender }),
+    load: async () => ({ followupsEnabled: true, smsEnabled: true, hasSmsAccess: true, sender }),
     stillReady: async () => true,
     send: async () => { sends++; return { id: "SM1" }; },
   };
@@ -81,10 +81,10 @@ test("SMS delivery suppresses paused, non-Pro, unapproved, and changed senders",
   assert.equal(sent.provider_message_id, "SM1");
 
   for (const override of [
-    { load: async () => ({ followupsEnabled: false, smsEnabled: true, hasPro: true, sender }) },
-    { load: async () => ({ followupsEnabled: true, smsEnabled: false, hasPro: true, sender }) },
-    { load: async () => ({ followupsEnabled: true, smsEnabled: true, hasPro: false, sender }) },
-    { load: async () => ({ followupsEnabled: true, smsEnabled: true, hasPro: true, sender: { ...sender, status: "pending" } }) },
+    { load: async () => ({ followupsEnabled: false, smsEnabled: true, hasSmsAccess: true, sender }) },
+    { load: async () => ({ followupsEnabled: true, smsEnabled: false, hasSmsAccess: true, sender }) },
+    { load: async () => ({ followupsEnabled: true, smsEnabled: true, hasSmsAccess: false, sender }) },
+    { load: async () => ({ followupsEnabled: true, smsEnabled: true, hasSmsAccess: true, sender: { ...sender, status: "pending" } }) },
     { stillReady: async () => false },
   ]) {
     const result = await deliverSmsJob(job, { ...base, ...override });
@@ -142,6 +142,32 @@ test("real SQL: SMS queue serializes each owner and never auto-retries ambiguous
       await assert.rejects(db.query("select * from claim_sms_followups(1)"), /permission denied/);
       await db.exec("reset role");
     }
+  } finally {
+    await db.close();
+  }
+});
+
+
+test("real SQL: Pro does not unlock SMS but Pro+ does", async () => {
+  const db = await database();
+  try {
+    const user = randomUUID();
+    const profile = randomUUID();
+    await db.query("insert into auth.users(id) values ($1)", [user]);
+    await db.query("insert into profiles(id,user_id,slug,full_name,email) values ($1,$2,'tier-test','Tier Test','tier@example.com')", [profile, user]);
+
+    await db.query(
+      "update profile_entitlements set admin_lifetime=true, sms_admin_lifetime=false where profile_id=$1",
+      [profile],
+    );
+    assert.equal((await db.query("select profile_has_pro($1) as allowed", [profile])).rows[0].allowed, true);
+    assert.equal((await db.query("select profile_has_sms($1) as allowed", [profile])).rows[0].allowed, false);
+
+    await db.query(
+      "update profile_entitlements set sms_admin_lifetime=true where profile_id=$1",
+      [profile],
+    );
+    assert.equal((await db.query("select profile_has_sms($1) as allowed", [profile])).rows[0].allowed, true);
   } finally {
     await db.close();
   }
