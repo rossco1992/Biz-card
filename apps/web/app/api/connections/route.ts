@@ -151,8 +151,7 @@ export async function POST(request: Request) {
 
   if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && normalizedPhone && smsConsent) {
     const recipientPhone = normalizedPhone;
-    {
-      const [{ data: hasPro, error: proError }, { data: sender, error: senderError }] = await Promise.all([
+    const [{ data: hasPro, error: proError }, { data: sender, error: senderError }] = await Promise.all([
         supabase.rpc("profile_has_pro", { p_profile_id: profile.id }),
         supabase
           .from("sms_senders")
@@ -211,9 +210,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Connection saved, but text scheduling failed." }, { status: 500 });
       }
 
-      smsFollowupStatus = smsReady ? "scheduled" : "failed";
-      if (!smsReady) smsScheduledAt = null;
-    }
+    smsFollowupStatus = smsReady ? "scheduled" : "failed";
+    if (!smsReady) smsScheduledAt = null;
   }
 
   return NextResponse.json({
