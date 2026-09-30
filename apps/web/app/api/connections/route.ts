@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   const email = clean(body.email, 180).toLowerCase();
   const phone = clean(body.phone, 40);
   const consent = body.consent === true;
+  const smsConsent = body.sms_consent === true;
 
   if (!slug || !firstName || !email || !consent) {
     return NextResponse.json({ error: "First name, email, and consent are required." }, { status: 400 });
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
       email,
       phone: phone || null,
       consent_at: new Date().toISOString(),
+      sms_consent_at: smsConsent && phone ? new Date().toISOString() : null,
       mode_name_snapshot: mode?.name ?? null,
       event_id: event?.id ?? null,
       event_name_snapshot: event?.name ?? null,
@@ -143,7 +145,7 @@ export async function POST(request: Request) {
   let smsScheduledAt: string | null = null;
   let smsFollowupStatus: "paused" | "scheduled" | "failed" = "paused";
 
-  if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && phone) {
+  if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && phone && smsConsent) {
     const recipientPhone = normalizeNorthAmericanPhone(phone);
     if (recipientPhone) {
       const [{ data: hasPro, error: proError }, { data: sender, error: senderError }] = await Promise.all([
