@@ -11,14 +11,14 @@ export async function POST(request: Request) {
     const { db, profileId } = await smsOwner(request);
     if (!twilioConfigured()) throw new SmsHttpError("Text delivery is not configured yet.", 503);
 
-    const [profile, sender, pro] = await Promise.all([
+    const [profile, sender, smsAccess] = await Promise.all([
       db.from("profiles").select("full_name,phone").eq("id", profileId).maybeSingle(),
       db.from("sms_senders").select().eq("profile_id", profileId).maybeSingle(),
-      db.rpc("profile_has_pro", { p_profile_id: profileId }),
+      db.rpc("profile_has_sms", { p_profile_id: profileId }),
     ]);
 
-    if (profile.error || sender.error || pro.error) throw new SmsHttpError("Could not load your texting setup.", 503);
-    if (pro.data !== true) throw new SmsHttpError("Automatic text follow-ups are a KNCT Pro feature.", 403);
+    if (profile.error || sender.error || smsAccess.error) throw new SmsHttpError("Could not load your texting setup.", 503);
+    if (smsAccess.data !== true) throw new SmsHttpError("Automatic text follow-ups are a KNCT Pro+ feature.", 403);
 
     const to = normalizeNorthAmericanPhone(profile.data?.phone);
     if (!to) throw new SmsHttpError("Add a valid mobile number to your KNCT profile before testing.", 409);
