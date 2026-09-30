@@ -8,6 +8,9 @@ alter table public.modes
   add column if not exists sms_enabled boolean not null default false,
   add column if not exists sms_body_template text;
 
+alter table public.connections
+  add column if not exists sms_consent_at timestamptz;
+
 create table if not exists public.sms_senders (
   profile_id uuid primary key references public.profiles(id) on delete cascade,
   id uuid not null unique default gen_random_uuid(),
