@@ -14,6 +14,35 @@ function clean(value: unknown, max = 200) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+export async function GET(request: Request) {
+  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const db = getSupabaseAdmin();
+  if (!db) return NextResponse.json({ error: "Admin access is unavailable." }, { status: 503 });
+
+  const { data: senders, error: senderError } = await db
+    .from("sms_senders")
+    .select("profile_id,status,phone_number,status_detail,requested_at,approved_at,updated_at,twilio_subaccount_sid,messaging_service_sid,phone_number_sid,brand_sid,campaign_sid")
+    .order("requested_at", { ascending: true });
+
+  if (senderError) return NextResponse.json({ error: "Could not load texting setup requests." }, { status: 503 });
+
+  const profileIds = (senders || []).map((sender) => sender.profile_id);
+  const { data: profiles, error: profileError } = profileIds.length
+    ? await db.from("profiles").select("id,slug,full_name,email").in("id", profileIds)
+    : { data: [], error: null };
+
+  if (profileError) return NextResponse.json({ error: "Could not load KNCT account details." }, { status: 503 });
+
+  const profileById = new Map((profiles || []).map((profile) => [profile.id, profile]));
+  return NextResponse.json({
+    senders: (senders || []).map((sender) => ({
+      ...sender,
+      profile: profileById.get(sender.profile_id) || null,
+    })),
+  }, { headers: { "Cache-Control": "no-store" } });
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
