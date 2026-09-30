@@ -113,14 +113,14 @@ export default function ProScreen() {
       {isPro ? (
         <Card style={styles.proCard}>
           <Text style={uiStyles.sectionTitle}>Pro is active</Text>
-          <Text style={uiStyles.body}>Unlimited automatic follow-ups, full relationship history, event mode, and future Pro features are unlocked.</Text>
+          <Text style={uiStyles.body}>Unlimited automatic follow-ups, automatic texting after carrier approval, full relationship history, event mode, and future Pro features are unlocked.</Text>
           {subscription?.expires_at ? <Text style={uiStyles.small}>Current access through {new Date(subscription.expires_at).toLocaleDateString()}.</Text> : null}
         </Card>
       ) : (
         <>
           <Card>
             <Text style={uiStyles.sectionTitle}>Included with Pro</Text>
-            {["Unlimited automatic follow-ups", "AI-personalized follow-ups", "Full relationship history", "Event mode", "Multiple profiles as they roll out"].map((item) => (
+            {["Unlimited automatic follow-ups", "Automatic text follow-ups after carrier approval", "AI-personalized follow-ups", "Full relationship history", "Event mode", "Multiple profiles as they roll out"].map((item) => (
               <View key={item} style={styles.feature}><Text style={styles.check}>✓</Text><Text style={styles.featureText}>{item}</Text></View>
             ))}
           </Card>
