@@ -1,5 +1,5 @@
 -- Creates realistic App Review content for the dedicated password-auth user.
--- Run only after creating appreview@knct.app in Supabase Auth with a password
+-- Run only after creating appreview@getknctd.com in Supabase Auth with a password
 -- and marking the email confirmed. Safe to rerun: it replaces only that user's demo workspace.
 
 do $$
@@ -16,11 +16,11 @@ begin
   select id
     into v_user_id
   from auth.users
-  where lower(email) = lower('appreview@knct.app')
+  where lower(email) = lower('appreview@getknctd.com')
   limit 1;
 
   if v_user_id is null then
-    raise exception 'Create and confirm appreview@knct.app in Supabase Auth before running this script.';
+    raise exception 'Create and confirm appreview@getknctd.com in Supabase Auth before running this script.';
   end if;
 
   delete from public.profiles where user_id = v_user_id;
@@ -44,7 +44,7 @@ begin
     'Alex Morgan',
     'KNCT Demo',
     'Product Lead',
-    'appreview@knct.app',
+    'appreview@getknctd.com',
     '+1 201 555 0142',
     'https://www.getknctd.com',
     true,
