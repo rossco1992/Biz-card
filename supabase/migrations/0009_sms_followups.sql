@@ -1,5 +1,5 @@
 -- SMS follow-ups share the existing scheduler while keeping each KNCT sender isolated.
--- Automatic SMS is Pro-only at the API layer and only schedules for approved senders.
+-- Automatic SMS is Pro+-only at the API layer and only schedules for approved senders.
 
 alter table public.profiles
   add column if not exists sms_followup_enabled boolean not null default false;
