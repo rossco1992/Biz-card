@@ -10,7 +10,7 @@ export async function getPublicProfile(slug: string) {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id,slug,avatar_url,full_name,company,title,email,phone,website,followup_enabled,active_mode_id,active_event_id,email_signature,email_signature_html")
+    .select("id,slug,avatar_url,full_name,company,title,email,phone,website,followup_enabled,sms_followup_enabled,active_mode_id,active_event_id,email_signature,email_signature_html")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -20,7 +20,7 @@ export async function getPublicProfile(slug: string) {
   if (profile.active_mode_id) {
     const { data } = await supabase
       .from("modes")
-      .select("id,name,kind,delay_hours,subject_template,body_template,include_signature")
+      .select("id,name,kind,delay_hours,subject_template,body_template,include_signature,sms_enabled,sms_body_template")
       .eq("id", profile.active_mode_id)
       .maybeSingle();
     activeMode = data;
