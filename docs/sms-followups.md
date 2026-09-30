@@ -29,7 +29,7 @@ Never expose Twilio credentials through `NEXT_PUBLIC_*` or `EXPO_PUBLIC_*`.
 
 ## Provision an approved sender
 
-The protected endpoint is `POST /api/admin/sms` with `Authorization: Bearer <KNCT_ADMIN_TOKEN>`.
+The protected admin API uses `Authorization: Bearer <KNCT_ADMIN_TOKEN>`. `GET /api/admin/sms` lists requested/pending/approved senders; `POST /api/admin/sms` updates provisioning state.
 
 Approved sender payload:
 
