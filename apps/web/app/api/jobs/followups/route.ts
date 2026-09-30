@@ -86,29 +86,29 @@ export async function GET(request: Request) {
 
       const result = await deliverSmsJob(smsJob, {
         async load(profileId) {
-          const [profile, sender, pro] = await Promise.all([
+          const [profile, sender, smsAccess] = await Promise.all([
             db.from("profiles").select("followup_enabled,sms_followup_enabled").eq("id", profileId).maybeSingle(),
             db.from("sms_senders").select().eq("profile_id", profileId).maybeSingle(),
-            db.rpc("profile_has_pro", { p_profile_id: profileId }),
+            db.rpc("profile_has_sms", { p_profile_id: profileId }),
           ]);
-          if (profile.error || sender.error || pro.error) throw new Error("Database unavailable");
+          if (profile.error || sender.error || smsAccess.error) throw new Error("Database unavailable");
           return {
             followupsEnabled: profile.data?.followup_enabled === true,
             smsEnabled: profile.data?.sms_followup_enabled === true,
-            hasPro: pro.data === true,
+            hasSmsAccess: smsAccess.data === true,
             sender: sender.data,
           };
         },
         async stillReady(currentJob, sender) {
-          const [profile, currentSender, pro] = await Promise.all([
+          const [profile, currentSender, smsAccess] = await Promise.all([
             db.from("profiles").select("followup_enabled,sms_followup_enabled").eq("id", currentJob.profile_id).maybeSingle(),
             db.from("sms_senders").select("id,status,phone_number,twilio_subaccount_sid,messaging_service_sid").eq("profile_id", currentJob.profile_id).maybeSingle(),
-            db.rpc("profile_has_pro", { p_profile_id: currentJob.profile_id }),
+            db.rpc("profile_has_sms", { p_profile_id: currentJob.profile_id }),
           ]);
-          if (profile.error || currentSender.error || pro.error) throw new Error("Database unavailable");
+          if (profile.error || currentSender.error || smsAccess.error) throw new Error("Database unavailable");
           return profile.data?.followup_enabled === true
             && profile.data?.sms_followup_enabled === true
-            && pro.data === true
+            && smsAccess.data === true
             && currentSender.data?.id === sender.id
             && currentSender.data.status === "approved"
             && currentSender.data.phone_number === sender.phone_number
