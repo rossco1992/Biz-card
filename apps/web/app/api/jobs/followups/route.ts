@@ -16,7 +16,14 @@ export async function GET(request: Request) {
     const { data: jobs, error } = await db.rpc("claim_mailbox_followups", { batch_size: 4 });
     if (error) throw error;
     const results = await Promise.all((jobs || []).map(async job => {
-      const result = await deliverMailboxJob({ ...job, mailbox_id: job.mailbox_id ?? null }, {
+      if (!job.recipient_email) {
+        const result = { status: "failed" as const, error: "Email recipient is missing." };
+        const { error: saveError } = await db.from("followups").update({ ...result, updated_at: new Date().toISOString() }).eq("id", job.id).eq("status", "sending");
+        if (saveError) throw saveError;
+        return result.status;
+      }
+
+      const result = await deliverMailboxJob({ ...job, recipient_email: job.recipient_email, mailbox_id: job.mailbox_id ?? null }, {
         async load(profileId) {
           const [profile, mailbox] = await Promise.all([
             db.from("profiles").select("followup_enabled").eq("id", profileId).maybeSingle(),
