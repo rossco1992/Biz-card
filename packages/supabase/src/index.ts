@@ -47,7 +47,7 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
     events: eventsResult.data ?? [],
     connections: connectionsResult.data ?? [],
     subscription: subscriptionResult.error
-      ? { plan: "free", source: "free", expires_at: null, revenuecat_status: "inactive", product_id: null, used: 0, limit: 5 }
+      ? { plan: "free", source: "free", sms_access: false, expires_at: null, revenuecat_status: "inactive", product_id: null, used: 0, limit: 5 }
       : subscriptionResult.data ?? null,
   };
 }
