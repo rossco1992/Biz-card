@@ -18,7 +18,7 @@ export type SmsDeliveryDependencies = {
   load: (profileId: string) => Promise<{
     followupsEnabled: boolean;
     smsEnabled: boolean;
-    hasPro: boolean;
+    hasSmsAccess: boolean;
     sender: SmsSender | null;
   }>;
   stillReady: (job: SmsDeliveryJob, sender: SmsSender) => Promise<boolean>;
@@ -38,8 +38,8 @@ export async function deliverSmsJob(
       return { status: "cancelled", error: "Automatic text follow-ups were paused before this message sent." };
     }
 
-    if (!state.hasPro) {
-      return { status: "cancelled", error: "Automatic text follow-ups require KNCT Pro." };
+    if (!state.hasSmsAccess) {
+      return { status: "cancelled", error: "Automatic text follow-ups require KNCT Pro+." };
     }
 
     if (
