@@ -6,21 +6,21 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function status(db: any, profileId: string, smsEnabled: boolean) {
-  const [{ data: sender, error: senderError }, { data: hasPro, error: proError }] = await Promise.all([
+  const [{ data: sender, error: senderError }, { data: hasSms, error: smsAccessError }] = await Promise.all([
     db
       .from("sms_senders")
       .select("status,phone_number,status_detail,requested_at,approved_at")
       .eq("profile_id", profileId)
       .maybeSingle(),
-    db.rpc("profile_has_pro", { p_profile_id: profileId }),
+    db.rpc("profile_has_sms", { p_profile_id: profileId }),
   ]);
 
-  if (senderError || proError) throw new SmsHttpError("Could not load text follow-up status.", 503);
+  if (senderError || smsAccessError) throw new SmsHttpError("Could not load text follow-up status.", 503);
 
   return {
     sender,
     enabled: smsEnabled,
-    plan: hasPro ? "pro" : "free",
+    plan: hasSms ? "pro_plus" : "pro",
     provider_configured: twilioConfigured(),
   };
 }
@@ -41,11 +41,11 @@ export async function POST(request: Request) {
     const { db, profileId, smsEnabled } = await smsOwner(request);
     const body = await request.json().catch(() => null);
     const action = typeof body?.action === "string" ? body.action : "";
-    const { data: hasPro, error: proError } = await db.rpc("profile_has_pro", { p_profile_id: profileId });
-    if (proError) throw new SmsHttpError("Could not verify your membership.", 503);
+    const { data: hasSms, error: smsAccessError } = await db.rpc("profile_has_sms", { p_profile_id: profileId });
+    if (smsAccessError) throw new SmsHttpError("Could not verify your membership.", 503);
 
     if (action === "request") {
-      if (!hasPro) throw new SmsHttpError("Automatic text follow-ups are a KNCT Pro feature.", 403);
+      if (!hasSms) throw new SmsHttpError("Automatic text follow-ups are a KNCT Pro+ feature.", 403);
       const { data: current, error: currentError } = await db
         .from("sms_senders")
         .select("status")
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
         if (error) throw error;
       }
     } else if (action === "enable") {
-      if (!hasPro) throw new SmsHttpError("Automatic text follow-ups are a KNCT Pro feature.", 403);
+      if (!hasSms) throw new SmsHttpError("Automatic text follow-ups are a KNCT Pro+ feature.", 403);
       const { data: sender, error } = await db
         .from("sms_senders")
         .select("status,twilio_subaccount_sid,messaging_service_sid,phone_number")
