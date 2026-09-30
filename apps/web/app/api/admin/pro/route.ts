@@ -18,7 +18,8 @@ export async function POST(request: Request) {
   const slug = typeof body?.slug === "string" ? body.slug.trim().toLowerCase() : "";
   const days = Number(body?.days);
   const lifetime = body?.lifetime === true;
-  const note = typeof body?.note === "string" ? body.note.trim().slice(0, 300) : "Complimentary KNCT Pro";
+  const plan = body?.plan === "pro_plus" ? "pro_plus" : "pro";
+  const note = typeof body?.note === "string" ? body.note.trim().slice(0, 300) : `Complimentary KNCT ${plan === "pro_plus" ? "Pro+" : "Pro"}`;
 
   if (!slug || (!lifetime && (!Number.isFinite(days) || days < 1 || days > 3650))) {
     return NextResponse.json({ error: "Provide a KNCT slug and either lifetime=true or days between 1 and 3650." }, { status: 400 });
@@ -34,6 +35,9 @@ export async function POST(request: Request) {
     admin_lifetime: lifetime,
     admin_expires_at: expiresAt,
     admin_note: note,
+    sms_admin_lifetime: plan === "pro_plus" ? lifetime : false,
+    sms_admin_expires_at: plan === "pro_plus" ? expiresAt : null,
+    sms_admin_note: plan === "pro_plus" ? note : null,
     updated_at: new Date().toISOString(),
   } as never, { onConflict: "profile_id" });
 
@@ -46,7 +50,7 @@ export async function POST(request: Request) {
     ok: true,
     slug: profile.slug,
     name: profile.full_name,
-    plan: "pro",
+    plan,
     source: "admin",
     lifetime,
     expires_at: expiresAt,
@@ -69,6 +73,9 @@ export async function DELETE(request: Request) {
     admin_lifetime: false,
     admin_expires_at: null,
     admin_note: null,
+    sms_admin_lifetime: false,
+    sms_admin_expires_at: null,
+    sms_admin_note: null,
     updated_at: new Date().toISOString(),
   } as never).eq("profile_id", profile.id);
 
