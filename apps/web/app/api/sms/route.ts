@@ -6,21 +6,22 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function status(db: any, profileId: string, smsEnabled: boolean) {
-  const [{ data: sender, error: senderError }, { data: hasSms, error: smsAccessError }] = await Promise.all([
+  const [{ data: sender, error: senderError }, { data: hasPro, error: proError }, { data: hasSms, error: smsAccessError }] = await Promise.all([
     db
       .from("sms_senders")
       .select("status,phone_number,status_detail,requested_at,approved_at")
       .eq("profile_id", profileId)
       .maybeSingle(),
+    db.rpc("profile_has_pro", { p_profile_id: profileId }),
     db.rpc("profile_has_sms", { p_profile_id: profileId }),
   ]);
 
-  if (senderError || smsAccessError) throw new SmsHttpError("Could not load text follow-up status.", 503);
+  if (senderError || proError || smsAccessError) throw new SmsHttpError("Could not load text follow-up status.", 503);
 
   return {
     sender,
     enabled: smsEnabled,
-    plan: hasSms ? "pro_plus" : "pro",
+    plan: hasSms ? "pro_plus" : hasPro ? "pro" : "free",
     provider_configured: twilioConfigured(),
   };
 }
