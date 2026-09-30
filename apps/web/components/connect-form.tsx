@@ -29,6 +29,7 @@ export function ConnectForm({ profile }: { profile: Profile }) {
       email: String(form.get("email") || "").trim(),
       phone: String(form.get("phone") || "").trim(),
       consent: form.get("consent") === "on",
+      sms_consent: form.get("sms_consent") === "on",
     };
 
     try {
@@ -97,7 +98,11 @@ export function ConnectForm({ profile }: { profile: Profile }) {
       </div>
       <label className="consent">
         <input name="consent" type="checkbox" required />
-        <span>By connecting, you agree to share this information with {profile.full_name} and receive one follow-up by email or text related to this introduction. Msg & data rates may apply. Reply STOP to opt out of texts.</span>
+        <span>By connecting, you agree to share this information with {profile.full_name} and receive one follow-up email related to this introduction.</span>
+      </label>
+      <label className="consent">
+        <input name="sms_consent" type="checkbox" />
+        <span>Optional: text me one follow-up at the mobile number above. Msg & data rates may apply. Reply STOP to opt out.</span>
       </label>
       <button className="primaryButton" type="submit" disabled={status === "submitting"}>
         {status === "submitting" ? "Connecting…" : "Swap contacts"}
