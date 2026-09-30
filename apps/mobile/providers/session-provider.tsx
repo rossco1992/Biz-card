@@ -11,7 +11,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { configurePurchases, revenueCatConfigured } from "@/lib/billing";
 
 type ProfileInput = Pick<Profile, "slug" | "full_name" | "company" | "title" | "email" | "phone" | "website">;
-type ModeInput = Pick<Mode, "name" | "delay_hours" | "subject_template" | "body_template" | "include_signature">;
+type ModeInput = Pick<Mode, "name" | "delay_hours" | "subject_template" | "body_template" | "include_signature" | "sms_enabled" | "sms_body_template">;
 type EventInput = Pick<Event, "name" | "location" | "event_date">;
 
 type SessionContextValue = {
