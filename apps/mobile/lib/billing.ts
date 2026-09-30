@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import Purchases, { LOG_LEVEL, type CustomerInfo, type PurchasesOffering, type PurchasesPackage } from "react-native-purchases";
 
 const PRO_ENTITLEMENT_ID = "pro";
+const PRO_PLUS_ENTITLEMENT_ID = "pro_plus";
 let configured = false;
 let configuredUserId: string | null = null;
 
@@ -40,7 +41,11 @@ export async function currentOffering(userId: string): Promise<PurchasesOffering
 }
 
 export function hasPro(customerInfo: CustomerInfo) {
-  return Boolean(customerInfo.entitlements.active[PRO_ENTITLEMENT_ID]);
+  return Boolean(customerInfo.entitlements.active[PRO_ENTITLEMENT_ID] || customerInfo.entitlements.active[PRO_PLUS_ENTITLEMENT_ID]);
+}
+
+export function hasProPlus(customerInfo: CustomerInfo) {
+  return Boolean(customerInfo.entitlements.active[PRO_PLUS_ENTITLEMENT_ID]);
 }
 
 export async function buyPackage(userId: string, pkg: PurchasesPackage) {
