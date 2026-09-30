@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validEmail } from "@/lib/mailbox-providers";
-import { buildEventContext, formatEventDate, firstNameFromFullName, mergeTemplate } from "@biz-card/core";
+import { appendSmsOptOut, buildEventContext, formatEventDate, firstNameFromFullName, mergeTemplate, normalizeNorthAmericanPhone } from "@biz-card/core";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -115,6 +115,7 @@ export async function POST(request: Request) {
       .insert({
         connection_id: connection.id,
         profile_id: profile.id,
+        channel: "email",
         mode_id: mode.id,
         send_at: scheduledAt,
         status: ready ? "scheduled" : "failed",
@@ -125,6 +126,7 @@ export async function POST(request: Request) {
         body_snapshot: text,
         body_html_snapshot: html,
         recipient_email: email,
+        recipient_phone: null,
       })
       .select("id")
       .single();
@@ -138,9 +140,81 @@ export async function POST(request: Request) {
     if (!ready) scheduledAt = null;
   }
 
+  let smsScheduledAt: string | null = null;
+  let smsFollowupStatus: "paused" | "scheduled" | "failed" = "paused";
+
+  if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && phone) {
+    const recipientPhone = normalizeNorthAmericanPhone(phone);
+    if (recipientPhone) {
+      const [{ data: hasPro, error: proError }, { data: sender, error: senderError }] = await Promise.all([
+        supabase.rpc("profile_has_pro", { p_profile_id: profile.id }),
+        supabase
+          .from("sms_senders")
+          .select("status,twilio_subaccount_sid,messaging_service_sid,phone_number")
+          .eq("profile_id", profile.id)
+          .maybeSingle(),
+      ]);
+
+      if (proError || senderError) {
+        return NextResponse.json({ error: "Connection saved, but text scheduling is unavailable." }, { status: 503 });
+      }
+
+      const smsReady = Boolean(
+        hasPro
+        && sender?.status === "approved"
+        && sender.twilio_subaccount_sid
+        && sender.messaging_service_sid
+        && sender.phone_number,
+      );
+
+      const delayHours = Math.min(336, Math.max(1, mode.delay_hours ?? 24));
+      smsScheduledAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
+      const values = {
+        first_name: firstName,
+        last_name: lastName,
+        full_name: [firstName, lastName].filter(Boolean).join(" "),
+        my_first_name: firstNameFromFullName(profile.full_name),
+        event_name: event?.name ?? "the event",
+        event_location: event?.location ?? "",
+        event_date: formatEventDate(event?.event_date),
+        event_context: buildEventContext(event?.name, event?.location),
+      };
+      const smsBody = appendSmsOptOut(mergeTemplate(mode.sms_body_template || mode.body_template, values));
+
+      const { error: smsError } = await supabase
+        .from("followups")
+        .insert({
+          connection_id: connection.id,
+          profile_id: profile.id,
+          channel: "sms",
+          mode_id: mode.id,
+          send_at: smsScheduledAt,
+          status: smsReady ? "scheduled" : "failed",
+          delivery_provider: "twilio",
+          mailbox_id: null,
+          error: smsReady ? null : "Your KNCT texting number is not currently approved for automatic messages.",
+          subject_snapshot: "SMS follow-up",
+          body_snapshot: smsBody,
+          body_html_snapshot: null,
+          recipient_email: null,
+          recipient_phone: recipientPhone,
+        });
+
+      if (smsError) {
+        console.error("SMS followup insert failed", smsError);
+        return NextResponse.json({ error: "Connection saved, but text scheduling failed." }, { status: 500 });
+      }
+
+      smsFollowupStatus = smsReady ? "scheduled" : "failed";
+      if (!smsReady) smsScheduledAt = null;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     scheduled_at: scheduledAt,
     followup_status: followupStatus,
+    sms_scheduled_at: smsScheduledAt,
+    sms_followup_status: smsFollowupStatus,
   }, { status: 201 });
 }
