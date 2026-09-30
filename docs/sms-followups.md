@@ -8,7 +8,7 @@ KNCT owns the texting integration. End users do **not** create a Twilio account,
 2. KNCT records a private `sms_senders` provisioning request.
 3. After carrier/Twilio approval, KNCT provisions that user with a dedicated Twilio subaccount + Messaging Service + sender number and marks the sender approved.
 4. The user enables automatic texting in KNCT.
-5. A public-card visitor may provide a mobile number and explicitly consent to one introduction-related email or text.
+5. A public-card visitor separately consents to the email follow-up and, optionally, to one introduction-related text. Supplying a phone number by itself never authorizes SMS.
 6. The active mode may schedule email, SMS, or both.
 7. The existing authenticated follow-up worker claims due jobs every minute.
 8. SMS sends use the approved user's Messaging Service. Twilio's accepted Message SID is stored in `followups.provider_message_id`.
@@ -18,6 +18,7 @@ Twilio Messaging Services choose the actual sender from their sender pool. For U
 ## Production prerequisites
 
 - Apply `supabase/migrations/0009_sms_followups.sql`.
+- Run `supabase/operations/check_sms_followups.sql` and confirm all migration checks return true.
 - Add server-only Vercel environment variables:
   - `TWILIO_ACCOUNT_SID`
   - `TWILIO_AUTH_TOKEN`
