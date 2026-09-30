@@ -22,15 +22,15 @@ test("missing follow-ups remain absent instead of inventing a schedule", () => {
   }
 });
 
-test("both display consumers use the shared accessor", () => {
-  for (const path of [
-    "../../../apps/mobile/app/(tabs)/connections.tsx",
-    "../../../apps/web/components/owner-dashboard.tsx",
-  ]) {
-    const source = readFileSync(new URL(path, import.meta.url), "utf8");
-    assert.match(source, /const followup = getConnectionFollowup\(connection\)/);
-    assert.doesNotMatch(source, /connection\.followups\?\.\[0\]/);
-  }
+test("display consumers use shared follow-up accessors", () => {
+  const mobile = readFileSync(new URL("../../../apps/mobile/app/(tabs)/connections.tsx", import.meta.url), "utf8");
+  assert.match(mobile, /getConnectionFollowupByChannel\(item, "email"\)/);
+  assert.match(mobile, /getConnectionFollowupByChannel\(item, "sms"\)/);
+  assert.doesNotMatch(mobile, /item\.followups\?\.\[0\]/);
+
+  const web = readFileSync(new URL("../../../apps/web/components/owner-dashboard.tsx", import.meta.url), "utf8");
+  assert.match(web, /const followup = getConnectionFollowup\(connection\)/);
+  assert.doesNotMatch(web, /connection\.followups\?\.\[0\]/);
 });
 
 
