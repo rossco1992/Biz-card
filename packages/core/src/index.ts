@@ -100,6 +100,8 @@ export const defaultModes = (profileId: string) => [
     body_template:
       "Hey {{first_name}} — great meeting you. Wanted to follow up while our conversation was still fresh. If it'd be useful to keep talking, happy to find some time.",
     include_signature: true,
+    sms_enabled: false,
+    sms_body_template: null,
   },
   {
     profile_id: profileId,
@@ -110,6 +112,8 @@ export const defaultModes = (profileId: string) => [
     body_template:
       "Hey {{first_name}} — {{my_first_name}} here. It was great meeting you at {{event_context}}. I wanted to follow up while our conversation was still fresh. Would love to stay connected.",
     include_signature: true,
+    sms_enabled: false,
+    sms_body_template: null,
   },
 ];
 
