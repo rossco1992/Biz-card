@@ -30,7 +30,7 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
     client.from("events").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
     client
       .from("connections")
-      .select("*,followups(status,send_at,sent_at,error)")
+      .select("*,followups(channel,status,send_at,sent_at,error)")
       .eq("profile_id", profile.id)
       .order("created_at", { ascending: false })
       .limit(100),
