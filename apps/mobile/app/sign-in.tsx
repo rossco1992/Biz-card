@@ -8,14 +8,17 @@ import { colors, displayFont } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 
 export default function SignIn() {
-  const { session, sendMagicLink, configured, loading } = useSession();
+  const { session, sendMagicLink, signInWithPassword, configured, loading } = useSession();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [reviewerMode, setReviewerMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const submitting = useRef(false);
   const validEmail = isValidEmail(email);
+  const validReviewerCredentials = validEmail && password.length > 0;
 
   if (session) return <Redirect href="/" />;
 
@@ -31,10 +34,14 @@ export default function SignIn() {
     submitting.current = true;
     setBusy(true);
     try {
-      await sendMagicLink(email.trim());
-      setMessage("Check your inbox and spam folder, then tap the sign-in link to return here.");
+      if (reviewerMode) {
+        await signInWithPassword(email.trim(), password);
+      } else {
+        await sendMagicLink(email.trim());
+        setMessage("Check your inbox and spam folder, then tap the sign-in link to return here.");
+      }
     } catch (cause) {
-      setError(getSignInErrorMessage(cause));
+      setError(reviewerMode ? "We couldn't sign in with those reviewer credentials. Check the email and password and try again." : getSignInErrorMessage(cause));
     } finally {
       submitting.current = false;
       setBusy(false);
@@ -50,7 +57,7 @@ export default function SignIn() {
       </View>
       <Card>
         <Field
-          label="Work email"
+          label={reviewerMode ? "Reviewer email" : "Work email"}
           value={email}
           onChangeText={(value) => {
             setEmail(value);
@@ -69,11 +76,51 @@ export default function SignIn() {
           onSubmitEditing={() => void submit()}
           placeholder="you@company.com"
         />
-        <Button onPress={() => void submit()} loading={busy} disabled={busy || loading || !configured || !validEmail}>Email me a sign-in link</Button>
+        {reviewerMode ? (
+          <Field
+            label="Password"
+            value={password}
+            onChangeText={(value) => {
+              setPassword(value);
+              setError("");
+              setMessage("");
+            }}
+            editable={!busy && !loading && configured}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="current-password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={() => void submit()}
+            placeholder="Reviewer password"
+          />
+        ) : null}
+        <Button
+          onPress={() => void submit()}
+          loading={busy}
+          disabled={busy || loading || !configured || (reviewerMode ? !validReviewerCredentials : !validEmail)}
+        >
+          {reviewerMode ? "Sign in for App Review" : "Email me a sign-in link"}
+        </Button>
+        <Button
+          variant="secondary"
+          onPress={() => {
+            setReviewerMode((value) => !value);
+            setPassword("");
+            setError("");
+            setMessage("");
+          }}
+          disabled={busy || loading || !configured}
+        >
+          {reviewerMode ? "Use email sign-in instead" : "App reviewer sign-in"}
+        </Button>
         {!configured ? <Notice tone="error">Sign-in is temporarily unavailable. Please try again later.</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
-        <Text style={styles.finePrint}>No password to remember. The link securely signs you into this device.</Text>
+        <Text style={styles.finePrint}>
+          {reviewerMode ? "Reviewer access uses the credentials supplied in App Store Connect." : "No password to remember. The link securely signs you into this device."}
+        </Text>
       </Card>
     </Screen>
   );
