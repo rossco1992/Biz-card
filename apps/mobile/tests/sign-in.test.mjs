@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getSignInErrorMessage, isValidEmail } from '../lib/sign-in.ts';
+import { getSignInErrorMessage, isAppReviewEmail, isValidEmail } from '../lib/sign-in.ts';
 
 test('email validation accepts trimmed addresses and plus tags', () => {
   for (const email of [' person@company.com ', 'person+card@sub.company.com']) assert.equal(isValidEmail(email), true);
   for (const email of ['', '   ', 'person', 'person@', '@company.com', 'person@company', 'person name@company.com', 'person@@company.com']) assert.equal(isValidEmail(email), false);
+});
+
+test('only the dedicated App Review account uses password sign-in', () => {
+  for (const email of ['appreview@getknctd.com', ' APPREVIEW@GETKNCTD.COM ']) assert.equal(isAppReviewEmail(email), true);
+  for (const email of ['', 'appreview@getknctd.co', 'review@getknctd.com', 'person@getknctd.com']) assert.equal(isAppReviewEmail(email), false);
 });
 
 test('rate limits take priority over wrapped confirmation-email failures', () => {
