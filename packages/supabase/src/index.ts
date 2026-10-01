@@ -30,7 +30,7 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
     client.from("events").select("*").eq("profile_id", profile.id).order("created_at", { ascending: false }),
     client
       .from("connections")
-      .select("*,followups(status,send_at,sent_at,error)")
+      .select("*,followups(channel,status,send_at,sent_at,error)")
       .eq("profile_id", profile.id)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -47,7 +47,7 @@ export async function loadOwnerWorkspace(client: BizCardSupabaseClient, userId: 
     events: eventsResult.data ?? [],
     connections: connectionsResult.data ?? [],
     subscription: subscriptionResult.error
-      ? { plan: "free", source: "free", expires_at: null, revenuecat_status: "inactive", product_id: null, used: 0, limit: 5 }
+      ? { plan: "free", source: "free", sms_access: false, expires_at: null, revenuecat_status: "inactive", product_id: null, used: 0, limit: 5 }
       : subscriptionResult.data ?? null,
   };
 }

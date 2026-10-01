@@ -17,6 +17,8 @@ export default function ModeEditor() {
   const [subject, setSubject] = useState(friendlyTemplate(mode?.subject_template ?? "{{my_first_name}} from {{event_name}} — great meeting you"));
   const [body, setBody] = useState(friendlyTemplate(mode?.body_template ?? "Hey {{first_name}} — {{my_first_name}} here. It was great meeting you at {{event_context}}. I wanted to follow up while our conversation was still fresh. Would love to stay connected."));
   const [includeSignature, setIncludeSignature] = useState(mode?.include_signature ?? true);
+  const [smsEnabled, setSmsEnabled] = useState(mode?.sms_enabled ?? false);
+  const [smsBody, setSmsBody] = useState(friendlyTemplate(mode?.sms_body_template ?? "Hey {{first_name}} — {{my_first_name}} here. Great meeting you. Wanted to stay connected."));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,7 +56,7 @@ export default function ModeEditor() {
     setBusy(true);
     setError("");
     try {
-      await saveMode(creating ? null : mode?.id ?? null, { name: name.trim(), delay_hours: Number(delay), subject_template: storedTemplate(subject.trim()), body_template: storedTemplate(body.trim()), include_signature: includeSignature });
+      await saveMode(creating ? null : mode?.id ?? null, { name: name.trim(), delay_hours: Number(delay), subject_template: storedTemplate(subject.trim()), body_template: storedTemplate(body.trim()), include_signature: includeSignature, sms_enabled: smsEnabled, sms_body_template: smsEnabled ? storedTemplate(smsBody.trim()) : null });
       router.back();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save this mode.");
@@ -86,8 +88,19 @@ export default function ModeEditor() {
           </View>
           <Switch value={includeSignature} onValueChange={setIncludeSignature} trackColor={{ false: "#CCD0CD", true: colors.accent }} thumbColor={includeSignature ? colors.accent : "#F8F8F6"} />
         </View>
+        <View style={styles.signatureRow}>
+          <View style={styles.signatureCopy}>
+            <Text style={styles.signatureTitle}>Also send a text</Text>
+            <Text style={uiStyles.small}>Uses your dedicated KNCT texting number when texting is approved and enabled.</Text>
+          </View>
+          <Switch value={smsEnabled} onValueChange={setSmsEnabled} trackColor={{ false: "#CCD0CD", true: colors.accent }} thumbColor={smsEnabled ? colors.accent : "#F8F8F6"} />
+        </View>
+        {smsEnabled ? <>
+          <TemplateField label="Text message" value={smsBody} onChangeText={setSmsBody} multiline disabled={busy} />
+          <Text style={uiStyles.small}>KNCT automatically adds the required opt-out instruction when the text is queued.</Text>
+        </> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
-        <Button onPress={() => void save()} loading={busy} disabled={busy || (!creating && !mode) || !name.trim() || !subject.trim() || !body.trim() || !Number.isFinite(Number(delay))}>Save mode</Button>
+        <Button onPress={() => void save()} loading={busy} disabled={busy || (!creating && !mode) || !name.trim() || !subject.trim() || !body.trim() || (smsEnabled && !smsBody.trim()) || !Number.isFinite(Number(delay))}>Save mode</Button>
       </Card>
       {!creating && mode ? <View style={{ gap: 10 }}>
         <Button variant="danger" onPress={confirmDelete} disabled={busy || !canDelete}>Delete mode</Button>

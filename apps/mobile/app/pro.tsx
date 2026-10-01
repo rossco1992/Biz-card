@@ -7,16 +7,22 @@ import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 import { buyPackage, currentOffering, hasPro, redeemOfferCode, restorePurchases, revenueCatConfigured, syncPurchases } from "@/lib/billing";
 
+function isProPlusPackage(pkg: PurchasesPackage) {
+  const id = `${pkg.identifier} ${pkg.product.identifier}`.toLowerCase();
+  return id.includes("pro_plus") || id.includes("pro-plus") || id.includes("pro+");
+}
+
 function packageLabel(pkg: PurchasesPackage) {
   const id = `${pkg.identifier} ${pkg.product.identifier}`.toLowerCase();
-  if (id.includes("annual") || id.includes("year")) return "Yearly";
-  if (id.includes("month")) return "Monthly";
-  return pkg.product.title || "Pro";
+  const tier = isProPlusPackage(pkg) ? "Pro+" : "Pro";
+  if (id.includes("annual") || id.includes("year")) return `${tier} · Yearly`;
+  if (id.includes("month")) return `${tier} · Monthly`;
+  return pkg.product.title || tier;
 }
 
 function packageRank(pkg: PurchasesPackage) {
   const label = packageLabel(pkg);
-  return label === "Yearly" ? 0 : label === "Monthly" ? 1 : 2;
+  return label.includes("Yearly") ? 0 : label.includes("Monthly") ? 1 : 2;
 }
 
 export default function ProScreen() {
@@ -55,7 +61,9 @@ export default function ProScreen() {
 
   if (!session) return null;
   const userId = session.user.id;
-  const isPro = subscription?.plan === "pro";
+  const isProPlus = subscription?.plan === "pro_plus";
+  const isPaid = subscription?.plan === "pro" || isProPlus;
+  const selectedIsProPlus = selected ? isProPlusPackage(selected) : false;
 
   async function purchase() {
     if (!selected) return;
@@ -107,23 +115,24 @@ export default function ProScreen() {
       <View style={styles.topRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={styles.close}>×</Text></Pressable>
       </View>
-      <PageHeader eyebrow="KNCT Pro" title={isPro ? "You’re Pro." : "Never lose a connection."} />
+      <PageHeader eyebrow={isProPlus ? "KNCT Pro+" : "KNCT Pro"} title={isProPlus ? "You’re Pro+." : isPaid ? "You’re Pro." : "Never lose a connection."} />
       <Text style={uiStyles.body}>Meet people. KNCT handles the follow-up so the relationship doesn’t end with the introduction.</Text>
 
-      {isPro ? (
+      {isPaid ? (
         <Card style={styles.proCard}>
-          <Text style={uiStyles.sectionTitle}>Pro is active</Text>
-          <Text style={uiStyles.body}>Unlimited automatic follow-ups, full relationship history, event mode, and future Pro features are unlocked.</Text>
+          <Text style={uiStyles.sectionTitle}>{isProPlus ? "Pro+ is active" : "Pro is active"}</Text>
+          <Text style={uiStyles.body}>{isProPlus ? "Everything in Pro plus automatic text follow-ups after carrier approval is unlocked." : "Unlimited email follow-ups, AI personalization, relationship history, and event mode are unlocked. Upgrade to Pro+ when you want automatic texting."}</Text>
           {subscription?.expires_at ? <Text style={uiStyles.small}>Current access through {new Date(subscription.expires_at).toLocaleDateString()}.</Text> : null}
         </Card>
       ) : (
         <>
           <Card>
             <Text style={uiStyles.sectionTitle}>Included with Pro</Text>
-            {["Unlimited automatic follow-ups", "AI-personalized follow-ups", "Full relationship history", "Event mode", "Multiple profiles as they roll out"].map((item) => (
+            {["Unlimited email follow-ups", "AI-personalized follow-ups", "Full relationship history", "Event mode", "Multiple profiles as they roll out"].map((item) => (
               <View key={item} style={styles.feature}><Text style={styles.check}>✓</Text><Text style={styles.featureText}>{item}</Text></View>
             ))}
           </Card>
+          <Card><Text style={uiStyles.sectionTitle}>Pro+</Text><Text style={uiStyles.body}>Everything in Pro, plus a dedicated KNCT texting number and automatic SMS follow-ups after carrier approval.</Text></Card>
 
           {!revenueCatConfigured() ? <Notice>Subscriptions are ready in the app, but this build still needs RevenueCat API keys before purchases can be tested.</Notice> : null}
           {loading ? <Notice>Loading App Store plans…</Notice> : null}
@@ -138,16 +147,16 @@ export default function ProScreen() {
                 <View style={styles.planCopy}>
                   <View style={styles.planTitleRow}>
                     <Text style={styles.planTitle}>{label}</Text>
-                    {label === "Yearly" ? <View style={styles.best}><Text style={styles.bestText}>Best value</Text></View> : null}
+                    {label.includes("Yearly") ? <View style={styles.best}><Text style={styles.bestText}>Best value</Text></View> : null}
                   </View>
-                  <Text style={styles.price}>{pkg.product.priceString}{label === "Yearly" ? " / year" : label === "Monthly" ? " / month" : ""}</Text>
+                  <Text style={styles.price}>{pkg.product.priceString}{label.includes("Yearly") ? " / year" : label.includes("Monthly") ? " / month" : ""}</Text>
                 </View>
               </Pressable>
             );
           })}
 
-          <Text style={styles.trial}>7 days free, then the selected plan renews automatically unless canceled. Cancel anytime in your App Store or Google Play subscription settings.</Text>
-          <Button onPress={() => void purchase()} loading={busy} disabled={!selected || !revenueCatConfigured()}>Start 7-day free trial</Button>
+          <Text style={styles.trial}>{selectedIsProPlus ? "The selected plan renews automatically unless canceled." : "7 days free, then the selected plan renews automatically unless canceled."} Cancel anytime in your App Store or Google Play subscription settings.</Text>
+          <Button onPress={() => void purchase()} loading={busy} disabled={!selected || !revenueCatConfigured()}>{selectedIsProPlus ? "Subscribe to Pro+" : "Start 7-day free trial"}</Button>
         </>
       )}
 

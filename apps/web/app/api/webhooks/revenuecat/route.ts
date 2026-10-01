@@ -42,6 +42,7 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ ok: true, ignored: "unknown_subscriber" });
 
   const expiration = isoFromMillis(event.expiration_at_ms);
+  const entitlementIds = Array.isArray(event.entitlement_ids) ? event.entitlement_ids.filter((id: unknown): id is string => typeof id === "string") : [];
   const trial = String(event.period_type || "").toUpperCase() === "TRIAL";
   const type = String(event.type).toUpperCase();
 
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
     revenuecat_expires_at: expiration,
     revenuecat_product_id: event.product_id ?? null,
     revenuecat_provider: event.store ?? null,
+    revenuecat_entitlement_ids: entitlementIds,
     updated_at: new Date().toISOString(),
   } as never, { onConflict: "profile_id" });
 

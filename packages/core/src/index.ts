@@ -13,12 +13,30 @@ export function resolveWebUrl(configured?: string): string {
   }
 }
 
-/** Unique connection_id makes this a to-one join; tolerate older array payloads. */
+/** Connections can have one follow-up per channel. Tolerate older to-one payloads. */
+export function getConnectionFollowups<T extends object>(
+  connection: { followups?: T | T[] | null },
+): T[] {
+  const value = connection.followups;
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+/** Existing consumers continue to treat email as the primary follow-up. */
 export function getConnectionFollowup<T extends object>(
   connection: { followups?: T | T[] | null },
 ): T | undefined {
-  const value = connection.followups;
-  return Array.isArray(value) ? value[0] : value ?? undefined;
+  const followups = getConnectionFollowups(connection);
+  return followups.find((item) => (item as { channel?: string }).channel === "email") ?? followups[0];
+}
+
+export function getConnectionFollowupByChannel<T extends object>(
+  connection: { followups?: T | T[] | null },
+  channel: "email" | "sms",
+): T | undefined {
+  return getConnectionFollowups(connection).find(
+    (item) => (item as { channel?: string }).channel === channel,
+  );
 }
 
 export function slugify(value: string) {
@@ -82,6 +100,8 @@ export const defaultModes = (profileId: string) => [
     body_template:
       "Hey {{first_name}} — great meeting you. Wanted to follow up while our conversation was still fresh. If it'd be useful to keep talking, happy to find some time.",
     include_signature: true,
+    sms_enabled: false,
+    sms_body_template: null,
   },
   {
     profile_id: profileId,
@@ -92,6 +112,8 @@ export const defaultModes = (profileId: string) => [
     body_template:
       "Hey {{first_name}} — {{my_first_name}} here. It was great meeting you at {{event_context}}. I wanted to follow up while our conversation was still fresh. Would love to stay connected.",
     include_signature: true,
+    sms_enabled: false,
+    sms_body_template: null,
   },
 ];
 
@@ -105,4 +127,25 @@ export function validEventDate(value: string): boolean {
 export function formatEventDate(value?: string | null): string {
   if (!value || !validEventDate(value)) return "";
   return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));
+}
+
+
+/** KNCT launches SMS in the US/Canada first. Normalize common NANP input to E.164. */
+export function normalizeNorthAmericanPhone(value?: string | null): string | null {
+  const raw = value?.trim() || "";
+  if (!raw) return null;
+  if (raw.startsWith("+")) {
+    const digits = raw.replace(/\D/g, "");
+    return digits.length >= 10 && digits.length <= 15 ? `+${digits}` : null;
+  }
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+export function appendSmsOptOut(body: string) {
+  const clean = body.trim();
+  if (/\bstop\b/i.test(clean)) return clean;
+  return `${clean} Reply STOP to opt out.`;
 }

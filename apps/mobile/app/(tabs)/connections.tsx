@@ -1,5 +1,5 @@
-import { connectionName, getConnectionFollowup } from "@biz-card/core";
-import type { Connection } from "@biz-card/types";
+import { connectionName, getConnectionFollowupByChannel } from "@biz-card/core";
+import type { Connection, Followup } from "@biz-card/types";
 import { useMemo, useState } from "react";
 import { FlatList, Platform, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState, KeyboardFrame, Notice, PageHeader } from "@/components/ui";
@@ -10,9 +10,8 @@ function when(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
-function statusFor(connection: Connection) {
-  const followup = getConnectionFollowup(connection);
-  if (!followup) return { label: "No follow-up", tone: "neutral" };
+function statusFor(followup: Pick<Followup, "status" | "send_at" | "sent_at" | "error" | "channel"> | undefined) {
+  if (!followup) return null;
   if (followup.status === "sent") return { label: "Sent", tone: "success" };
   if (followup.status === "sending") return { label: "Sending", tone: "scheduled" };
   if (followup.status === "failed") return { label: "Needs attention", tone: "danger" };
@@ -43,7 +42,10 @@ export default function ConnectionsScreen() {
         ListHeaderComponent={<View style={styles.header}><PageHeader eyebrow={`${connections.length} total`} title="Connections" />{error ? <Notice tone="error">{error}</Notice> : null}<TextInput style={styles.search} placeholder="Search people, email, mode, or event" placeholderTextColor="#929A96" value={query} onChangeText={setQuery} autoCapitalize="none" /></View>}
         ListEmptyComponent={<EmptyState icon="↗" title={query ? "No matches" : "Your next hello starts here"} copy={query ? "Try a different name, email, or mode." : "New contacts appear here as soon as they scan your card and connect."} />}
         renderItem={({ item }) => {
-          const status = statusFor(item);
+          const emailFollowup = getConnectionFollowupByChannel(item, "email");
+          const smsFollowup = getConnectionFollowupByChannel(item, "sms");
+          const emailStatus = statusFor(emailFollowup);
+          const smsStatus = statusFor(smsFollowup);
           return (
             <View style={styles.connection}>
               <View style={styles.initial}><Text style={styles.initialText}>{item.first_name[0]}{item.last_name?.[0] ?? ""}</Text></View>
@@ -51,9 +53,14 @@ export default function ConnectionsScreen() {
                 <Text style={styles.name}>{connectionName(item.first_name, item.last_name)}</Text>
                 <Text numberOfLines={1} style={styles.email}>{item.email}</Text>
                 <Text style={styles.meta}>{item.event_name_snapshot ? `${item.event_name_snapshot} · ${item.event_location_snapshot || "Event"} · ${when(item.created_at)}` : `${item.mode_name_snapshot || "No mode"} · ${when(item.created_at)}`}</Text>
-                {getConnectionFollowup(item)?.status === "failed" ? <Text style={styles.meta}>{getConnectionFollowup(item)?.error || "Check your email connection."}</Text> : null}
+                {emailFollowup?.status === "failed" ? <Text style={styles.meta}>Email: {emailFollowup.error || "Check your email connection."}</Text> : null}
+                {smsFollowup?.status === "failed" ? <Text style={styles.meta}>Text: {smsFollowup.error || "Check your texting setup."}</Text> : null}
               </View>
-              <View style={[styles.status, status.tone === "success" && styles.success, status.tone === "danger" && styles.danger, status.tone === "scheduled" && styles.scheduled]}><Text style={styles.statusText}>{status.label}</Text></View>
+              <View style={styles.statusStack}>
+                {emailStatus ? <View style={[styles.status, emailStatus.tone === "success" && styles.success, emailStatus.tone === "danger" && styles.danger, emailStatus.tone === "scheduled" && styles.scheduled]}><Text style={styles.channelLabel}>Email</Text><Text style={styles.statusText}>{emailStatus.label}</Text></View> : null}
+                {smsStatus ? <View style={[styles.status, smsStatus.tone === "success" && styles.success, smsStatus.tone === "danger" && styles.danger, smsStatus.tone === "scheduled" && styles.scheduled]}><Text style={styles.channelLabel}>Text</Text><Text style={styles.statusText}>{smsStatus.label}</Text></View> : null}
+                {!emailStatus && !smsStatus ? <View style={styles.status}><Text style={styles.statusText}>No follow-up</Text></View> : null}
+              </View>
             </View>
           );
         }}
@@ -75,10 +82,12 @@ const styles = StyleSheet.create({
   name: { color: colors.ink, fontSize: 15, fontWeight: "800" },
   email: { color: colors.muted, fontSize: 12, marginTop: 2 },
   meta: { color: "#8B938F", fontSize: 11, marginTop: 4 },
-  status: { maxWidth: 92, borderRadius: 99, backgroundColor: colors.accentSoft, paddingVertical: 6, paddingHorizontal: 9 },
+  statusStack: { gap: 5, alignItems: "flex-end" },
+  status: { maxWidth: 110, borderRadius: 12, backgroundColor: colors.accentSoft, paddingVertical: 6, paddingHorizontal: 9 },
   success: { backgroundColor: colors.accentSoft },
   danger: { backgroundColor: colors.dangerSoft },
   scheduled: { backgroundColor: colors.warningSoft },
+  channelLabel: { color: colors.muted, fontSize: 8, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center" },
   statusText: { color: colors.ink, fontSize: 10, fontWeight: "700", textAlign: "center" },
   separator: { height: 1, backgroundColor: colors.line, marginLeft: 58 },
 });

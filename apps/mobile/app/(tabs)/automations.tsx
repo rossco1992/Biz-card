@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { ConnectedEmail } from "@/components/connected-email";
+import { SmsFollowups } from "@/components/sms-followups";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Button, Card, Notice, PageHeader, Screen, uiStyles } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
@@ -32,6 +33,7 @@ export default function AutomationsScreen() {
         <Notice tone="success">KNCT Pro · Unlimited automatic follow-ups</Notice>
       )}
       <ConnectedEmail />
+      <SmsFollowups />
       <Card>
         <View style={uiStyles.between}>
           <View style={styles.toggleCopy}><Text style={uiStyles.sectionTitle}>Automatic follow-up</Text><Text style={uiStyles.small}>{profile.followup_enabled ? "Follow-ups are enabled. A connected email account is required." : "Connections save, but no email is scheduled."}</Text></View>
@@ -47,7 +49,7 @@ export default function AutomationsScreen() {
               <View style={styles.icon}><Text style={styles.iconText}>{mode.kind === "everyday" ? "☀︎" : "✦"}</Text></View>
               <View style={styles.modeCopy}>
                 <View style={styles.modeTitleRow}><Text style={styles.modeName}>{mode.name}</Text>{active ? <View style={styles.active}><Text style={styles.activeText}>Active</Text></View> : null}</View>
-                <Text style={uiStyles.small}>Wait {mode.delay_hours}h · {mode.subject_template}</Text>
+                <Text style={uiStyles.small}>{mode.sms_enabled ? "Email + text" : "Email"} · Wait {mode.delay_hours}h · {mode.subject_template}</Text>
               </View>
               <Text style={styles.chevron}>›</Text>
             </Pressable>

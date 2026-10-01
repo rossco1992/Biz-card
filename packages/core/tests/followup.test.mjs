@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { appendEmailSignature, buildEventContext, firstNameFromFullName, getConnectionFollowup, mergeTemplate } from "../src/index.ts";
+import { appendEmailSignature, appendSmsOptOut, buildEventContext, firstNameFromFullName, getConnectionFollowup, getConnectionFollowupByChannel, mergeTemplate, normalizeNorthAmericanPhone } from "../src/index.ts";
 
 for (const status of ["scheduled", "sending", "sent", "failed", "cancelled"]) {
   test(`reads ${status} from a to-one object and a legacy array`, () => {
@@ -22,15 +22,15 @@ test("missing follow-ups remain absent instead of inventing a schedule", () => {
   }
 });
 
-test("both display consumers use the shared accessor", () => {
-  for (const path of [
-    "../../../apps/mobile/app/(tabs)/connections.tsx",
-    "../../../apps/web/components/owner-dashboard.tsx",
-  ]) {
-    const source = readFileSync(new URL(path, import.meta.url), "utf8");
-    assert.match(source, /const followup = getConnectionFollowup\(connection\)/);
-    assert.doesNotMatch(source, /connection\.followups\?\.\[0\]/);
-  }
+test("display consumers use shared follow-up accessors", () => {
+  const mobile = readFileSync(new URL("../../../apps/mobile/app/(tabs)/connections.tsx", import.meta.url), "utf8");
+  assert.match(mobile, /getConnectionFollowupByChannel\(item, "email"\)/);
+  assert.match(mobile, /getConnectionFollowupByChannel\(item, "sms"\)/);
+  assert.doesNotMatch(mobile, /item\.followups\?\.\[0\]/);
+
+  const web = readFileSync(new URL("../../../apps/web/components/owner-dashboard.tsx", import.meta.url), "utf8");
+  assert.match(web, /const followup = getConnectionFollowup\(connection\)/);
+  assert.doesNotMatch(web, /connection\.followups\?\.\[0\]/);
 });
 
 
@@ -54,4 +54,25 @@ test("email signature is appended once only when the mode enables it", () => {
   assert.equal(appendEmailSignature("Hello Mike", "Ross Cohen\nKNCT", true), "Hello Mike\n\nRoss Cohen\nKNCT");
   assert.equal(appendEmailSignature("Hello Mike", "Ross Cohen\nKNCT", false), "Hello Mike");
   assert.equal(appendEmailSignature("Hello Mike", "   ", true), "Hello Mike");
+});
+
+
+test("email remains the primary follow-up when a connection also has SMS", () => {
+  const sms = { channel: "sms", status: "scheduled" };
+  const email = { channel: "email", status: "sent" };
+  const connection = { followups: [sms, email] };
+  assert.equal(getConnectionFollowup(connection), email);
+  assert.equal(getConnectionFollowupByChannel(connection, "sms"), sms);
+});
+
+test("normalizes common US phone formats for Twilio", () => {
+  assert.equal(normalizeNorthAmericanPhone("(732) 555-0123"), "+17325550123");
+  assert.equal(normalizeNorthAmericanPhone("1-732-555-0123"), "+17325550123");
+  assert.equal(normalizeNorthAmericanPhone("+44 20 7946 0958"), "+442079460958");
+  assert.equal(normalizeNorthAmericanPhone("123"), null);
+});
+
+test("SMS opt-out copy is appended once", () => {
+  assert.equal(appendSmsOptOut("Great meeting you."), "Great meeting you. Reply STOP to opt out.");
+  assert.equal(appendSmsOptOut("Great meeting you. Reply STOP to opt out."), "Great meeting you. Reply STOP to opt out.");
 });

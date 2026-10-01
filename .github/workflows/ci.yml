@@ -27,6 +27,9 @@ jobs:
       - name: Test-email endpoint tests
         run: node --experimental-strip-types --test apps/web/tests/test-email*.test.mjs
 
+      - name: SMS follow-up regression tests
+        run: node --test apps/web/tests/sms.test.mjs
+
       - name: Keyboard wiring regression tests
         run: node --test apps/mobile/tests/keyboard.test.mjs
 
