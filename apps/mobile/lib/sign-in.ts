@@ -1,6 +1,17 @@
+const APP_REVIEW_EMAIL = "appreview@getknctd.com";
+
 /** A lightweight format check; Supabase remains the authority on deliverability. */
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/**
+ * The App Review demo account uses password auth so Apple can reliably access
+ * the app without needing a magic-link inbox. The email is not a secret; the
+ * password remains only in Supabase and App Store Connect.
+ */
+export function isAppReviewEmail(value: string): boolean {
+  return value.trim().toLowerCase() === APP_REVIEW_EMAIL;
 }
 
 export function getSignInErrorMessage(cause: unknown): string {
