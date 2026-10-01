@@ -11,13 +11,13 @@ export default function SignIn() {
   const { session, sendMagicLink, signInWithPassword, configured, loading } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [reviewerMode, setReviewerMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const submitting = useRef(false);
   const validEmail = isValidEmail(email);
-  const reviewerMode = isAppReviewEmail(email);
   const validReviewerCredentials = validEmail && password.length > 0;
 
   if (session) return <Redirect href="/" />;
@@ -31,6 +31,13 @@ export default function SignIn() {
       setError("Enter a valid email address, like you@company.com.");
       return;
     }
+
+    if (!reviewerMode && isAppReviewEmail(email)) {
+      setReviewerMode(true);
+      setPassword("");
+      return;
+    }
+
     if (reviewerMode && !password) {
       setError("Enter the password for this account.");
       return;
@@ -68,7 +75,10 @@ export default function SignIn() {
           value={email}
           onChangeText={(value) => {
             setEmail(value);
-            if (!isAppReviewEmail(value)) setPassword("");
+            if (reviewerMode && !isAppReviewEmail(value)) {
+              setReviewerMode(false);
+              setPassword("");
+            }
             setError("");
             setMessage("");
           }}
@@ -81,7 +91,7 @@ export default function SignIn() {
           autoCorrect={false}
           autoComplete="email"
           returnKeyType={reviewerMode ? "next" : "send"}
-          onSubmitEditing={() => void submit()}
+          onSubmitEditing={reviewerMode ? undefined : () => void submit()}
           placeholder="you@company.com"
         />
         {reviewerMode ? (
