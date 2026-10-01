@@ -7,9 +7,14 @@ import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
 import { buyPackage, currentOffering, hasPro, redeemOfferCode, restorePurchases, revenueCatConfigured, syncPurchases } from "@/lib/billing";
 
+function isProPlusPackage(pkg: PurchasesPackage) {
+  const id = `${pkg.identifier} ${pkg.product.identifier}`.toLowerCase();
+  return id.includes("pro_plus") || id.includes("pro-plus") || id.includes("pro+");
+}
+
 function packageLabel(pkg: PurchasesPackage) {
   const id = `${pkg.identifier} ${pkg.product.identifier}`.toLowerCase();
-  const tier = id.includes("pro_plus") || id.includes("pro-plus") || id.includes("pro+") ? "Pro+" : "Pro";
+  const tier = isProPlusPackage(pkg) ? "Pro+" : "Pro";
   if (id.includes("annual") || id.includes("year")) return `${tier} · Yearly`;
   if (id.includes("month")) return `${tier} · Monthly`;
   return pkg.product.title || tier;
@@ -58,6 +63,7 @@ export default function ProScreen() {
   const userId = session.user.id;
   const isProPlus = subscription?.plan === "pro_plus";
   const isPaid = subscription?.plan === "pro" || isProPlus;
+  const selectedIsProPlus = selected ? isProPlusPackage(selected) : false;
 
   async function purchase() {
     if (!selected) return;
@@ -149,8 +155,8 @@ export default function ProScreen() {
             );
           })}
 
-          <Text style={styles.trial}>7 days free, then the selected plan renews automatically unless canceled. Cancel anytime in your App Store or Google Play subscription settings.</Text>
-          <Button onPress={() => void purchase()} loading={busy} disabled={!selected || !revenueCatConfigured()}>Start 7-day free trial</Button>
+          <Text style={styles.trial}>{selectedIsProPlus ? "The selected plan renews automatically unless canceled." : "7 days free, then the selected plan renews automatically unless canceled."} Cancel anytime in your App Store or Google Play subscription settings.</Text>
+          <Button onPress={() => void purchase()} loading={busy} disabled={!selected || !revenueCatConfigured()}>{selectedIsProPlus ? "Subscribe to Pro+" : "Start 7-day free trial"}</Button>
         </>
       )}
 
