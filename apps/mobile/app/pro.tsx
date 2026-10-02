@@ -5,7 +5,7 @@ import type { PurchasesOffering, PurchasesPackage } from "react-native-purchases
 import { Button, Card, Notice, PageHeader, Screen, uiStyles } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
-import { buyPackage, currentOffering, hasPro, redeemOfferCode, restorePurchases, revenueCatConfigured, syncPurchases } from "@/lib/billing";
+import { buyPackage, currentOffering, hasPro, hasProPlus, redeemOfferCode, restorePurchases, revenueCatConfigured, syncPurchases } from "@/lib/billing";
 
 function isProPlusPackage(pkg: PurchasesPackage) {
   const id = `${pkg.identifier} ${pkg.product.identifier}`.toLowerCase();
@@ -38,6 +38,22 @@ export default function ProScreen() {
     () => [...(offering?.availablePackages ?? [])].sort((a, b) => packageRank(a) - packageRank(b)),
     [offering],
   );
+  const plan = subscription?.plan ?? "free";
+  const isProPlus = plan === "pro_plus";
+  const isPro = plan === "pro";
+  const isPaid = isPro || isProPlus;
+  const purchasePackages = useMemo(
+    () => isProPlus ? [] : isPro ? packages.filter(isProPlusPackage) : packages,
+    [isPro, isProPlus, packages],
+  );
+
+  useEffect(() => {
+    setSelected((current) => {
+      if (!purchasePackages.length) return null;
+      if (current && purchasePackages.some((pkg) => pkg.identifier === current.identifier)) return current;
+      return purchasePackages[0];
+    });
+  }, [purchasePackages]);
 
   useEffect(() => {
     let active = true;
@@ -51,8 +67,6 @@ export default function ProScreen() {
       .then((next) => {
         if (!active) return;
         setOffering(next);
-        const ordered = [...(next?.availablePackages ?? [])].sort((a, b) => packageRank(a) - packageRank(b));
-        setSelected(ordered[0] ?? null);
       })
       .catch((cause) => active && setError(cause instanceof Error ? cause.message : "Could not load Pro plans."))
       .finally(() => active && setLoading(false));
@@ -61,8 +75,6 @@ export default function ProScreen() {
 
   if (!session) return null;
   const userId = session.user.id;
-  const isProPlus = subscription?.plan === "pro_plus";
-  const isPaid = subscription?.plan === "pro" || isProPlus;
   const selectedIsProPlus = selected ? isProPlusPackage(selected) : false;
 
   async function purchase() {
@@ -71,7 +83,7 @@ export default function ProScreen() {
     try {
       const info = await buyPackage(userId, selected);
       if (hasPro(info)) {
-        setMessage("KNCT Pro is active.");
+        setMessage(selectedIsProPlus ? "KNCT Pro+ is active." : "KNCT Pro is active.");
         await refresh();
       } else {
         setError("The purchase completed, but Pro access has not synced yet. Try Restore Purchases.");
@@ -86,7 +98,7 @@ export default function ProScreen() {
     try {
       const info = await restorePurchases(userId);
       if (hasPro(info)) {
-        setMessage("Your KNCT Pro purchase was restored.");
+        setMessage(hasProPlus(info) ? "Your KNCT Pro+ purchase was restored." : "Your KNCT Pro purchase was restored.");
         await refresh();
       } else {
         setMessage("No active Pro subscription was found for this account.");
@@ -101,7 +113,7 @@ export default function ProScreen() {
       await redeemOfferCode(userId);
       const info = await syncPurchases(userId);
       if (hasPro(info)) {
-        setMessage("Offer redeemed. KNCT Pro is active.");
+        setMessage(hasProPlus(info) ? "Offer redeemed. KNCT Pro+ is active." : "Offer redeemed. KNCT Pro is active.");
         await refresh();
       } else {
         setMessage("If you completed redemption, Pro may take a moment to sync. Restore Purchases can refresh it.");
@@ -121,24 +133,32 @@ export default function ProScreen() {
       {isPaid ? (
         <Card style={styles.proCard}>
           <Text style={uiStyles.sectionTitle}>{isProPlus ? "Pro+ is active" : "Pro is active"}</Text>
-          <Text style={uiStyles.body}>{isProPlus ? "Everything in Pro plus automatic text follow-ups after carrier approval is unlocked." : "Unlimited email follow-ups, AI personalization, relationship history, and event mode are unlocked. Upgrade to Pro+ when you want automatic texting."}</Text>
+          <Text style={uiStyles.body}>{isProPlus ? "Everything in Pro plus automatic text follow-ups after carrier approval is unlocked." : "Unlimited email follow-ups, AI personalization, relationship history, and event mode are unlocked."}</Text>
           {subscription?.expires_at ? <Text style={uiStyles.small}>Current access through {new Date(subscription.expires_at).toLocaleDateString()}.</Text> : null}
         </Card>
       ) : (
+        <Card>
+          <Text style={uiStyles.sectionTitle}>Included with Pro</Text>
+          {["Unlimited email follow-ups", "AI-personalized follow-ups", "Full relationship history", "Event mode", "Multiple profiles as they roll out"].map((item) => (
+            <View key={item} style={styles.feature}><Text style={styles.check}>✓</Text><Text style={styles.featureText}>{item}</Text></View>
+          ))}
+        </Card>
+      )}
+
+      {!isProPlus ? (
         <>
           <Card>
-            <Text style={uiStyles.sectionTitle}>Included with Pro</Text>
-            {["Unlimited email follow-ups", "AI-personalized follow-ups", "Full relationship history", "Event mode", "Multiple profiles as they roll out"].map((item) => (
-              <View key={item} style={styles.feature}><Text style={styles.check}>✓</Text><Text style={styles.featureText}>{item}</Text></View>
-            ))}
+            <Text style={uiStyles.sectionTitle}>{isPro ? "Upgrade to Pro+" : "Pro+"}</Text>
+            <Text style={uiStyles.body}>Everything in Pro, plus a dedicated KNCT texting number and automatic SMS follow-ups after carrier approval.</Text>
           </Card>
-          <Card><Text style={uiStyles.sectionTitle}>Pro+</Text><Text style={uiStyles.body}>Everything in Pro, plus a dedicated KNCT texting number and automatic SMS follow-ups after carrier approval.</Text></Card>
 
           {!revenueCatConfigured() ? <Notice>Subscriptions are ready in the app, but this build still needs RevenueCat API keys before purchases can be tested.</Notice> : null}
           {loading ? <Notice>Loading App Store plans…</Notice> : null}
-          {!loading && revenueCatConfigured() && !packages.length ? <Notice tone="error">No Pro products are available in the current RevenueCat offering.</Notice> : null}
+          {!loading && revenueCatConfigured() && !purchasePackages.length ? (
+            <Notice tone="error">{isPro ? "No Pro+ products are available in the current RevenueCat offering." : "No Pro products are available in the current RevenueCat offering."}</Notice>
+          ) : null}
 
-          {packages.map((pkg) => {
+          {purchasePackages.map((pkg) => {
             const active = selected?.identifier === pkg.identifier;
             const label = packageLabel(pkg);
             return (
@@ -155,10 +175,16 @@ export default function ProScreen() {
             );
           })}
 
-          <Text style={styles.trial}>{selectedIsProPlus ? "The selected plan renews automatically unless canceled." : "7 days free, then the selected plan renews automatically unless canceled."} Cancel anytime in your App Store or Google Play subscription settings.</Text>
-          <Button onPress={() => void purchase()} loading={busy} disabled={!selected || !revenueCatConfigured()}>{selectedIsProPlus ? "Subscribe to Pro+" : "Start 7-day free trial"}</Button>
+          {selected ? (
+            <>
+              <Text style={styles.trial}>{selectedIsProPlus ? "The selected plan renews automatically unless canceled." : "7 days free, then the selected plan renews automatically unless canceled."} Cancel anytime in your App Store or Google Play subscription settings.</Text>
+              <Button onPress={() => void purchase()} loading={busy} disabled={!revenueCatConfigured()}>
+                {selectedIsProPlus ? (isPro ? "Upgrade to Pro+" : "Subscribe to Pro+") : "Start 7-day free trial"}
+              </Button>
+            </>
+          ) : null}
         </>
-      )}
+      ) : null}
 
       {message ? <Notice tone="success">{message}</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
