@@ -1,0 +1,29 @@
+.page { max-width: 1120px; margin: auto; padding: 28px 32px; }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.back { font-size: 14px; text-decoration: none; font-weight: 600; }
+.hero { padding: 80px 0 60px; max-width: 740px; }
+.hero h1 { font-family: Georgia, serif; font-size: clamp(44px, 7vw, 76px); font-weight: 400; letter-spacing: -.045em; line-height: 1.05; margin: 18px 0 24px; }
+.hero > p:last-child { color: var(--muted); font-size: 19px; line-height: 1.65; max-width: 510px; }
+.columns { display: grid; grid-template-columns: .9fr 1.1fr; gap: 64px; align-items: start; }
+.contact { background: var(--accent); color: var(--card); border-radius: 28px; padding: 34px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
+.contact h2, .faq h2 { font-family: Georgia, serif; font-size: 34px; font-weight: 400; letter-spacing: -.025em; margin: 16px 0; }
+.contact p { line-height: 1.65; }
+.email { display: block; background: var(--card); color: var(--ink); text-align: center; text-decoration: none; font-weight: 600; border-radius: 12px; padding: 16px 12px; margin: 24px 0; overflow-wrap: anywhere; }
+.note { margin-top: 28px; padding-top: 22px; border-top: 1px solid #ffffff40; }
+.note h3 { font-size: 15px; margin: 0; }
+.note p { font-size: 14px; }
+.faq { padding: 8px 0; }
+.faq h2 { margin-bottom: 24px; }
+.faq details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+.faq summary { cursor: pointer; font-weight: 600; line-height: 1.5; padding-right: 8px; }
+.faq summary:focus-visible { outline: 3px solid var(--copper); outline-offset: 5px; }
+.faq details p { color: var(--muted); line-height: 1.7; margin-bottom: 0; }
+.footer { margin-top: 80px; border-top: 1px solid var(--line); padding: 24px 0 8px; display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+@media (max-width: 760px) {
+  .page { padding: 24px 20px; }
+  .hero { padding: 52px 0 30px; }
+  .columns { grid-template-columns: 1fr; gap: 36px; }
+  .contact { padding: 28px; }
+  .footer { margin-top: 48px; flex-direction: column; }
+}
