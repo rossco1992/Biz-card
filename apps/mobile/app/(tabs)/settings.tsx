@@ -91,15 +91,21 @@ export default function SettingsScreen() {
           <View style={{ flex: 1, gap: 5 }}>
             <Text style={uiStyles.sectionTitle}>Membership</Text>
             <Text style={uiStyles.small}>
-              {subscription?.plan === "pro"
-                ? "KNCT Pro · Unlimited automatic follow-ups"
-                : `KNCT Free · ${subscription?.used ?? 0}/${subscription?.limit ?? 5} follow-ups used this month`}
+              {subscription?.plan === "pro_plus"
+                ? "KNCT Pro+ · Unlimited email + automatic text follow-ups"
+                : subscription?.plan === "pro"
+                  ? "KNCT Pro · Unlimited automatic email follow-ups"
+                  : `KNCT Free · ${subscription?.used ?? 0}/${subscription?.limit ?? 5} follow-ups used this month`}
             </Text>
           </View>
-          <View style={styles.planBadge}><Text style={styles.planBadgeText}>{subscription?.plan === "pro" ? "PRO" : "FREE"}</Text></View>
+          <View style={styles.planBadge}>
+            <Text style={styles.planBadgeText}>
+              {subscription?.plan === "pro_plus" ? "PRO+" : subscription?.plan === "pro" ? "PRO" : "FREE"}
+            </Text>
+          </View>
         </View>
-        <Button variant={subscription?.plan === "pro" ? "secondary" : "primary"} onPress={() => router.push("/pro")}>
-          {subscription?.plan === "pro" ? "Manage Pro" : "Upgrade to Pro"}
+        <Button variant={subscription?.plan === "free" ? "primary" : "secondary"} onPress={() => router.push("/pro")}>
+          {subscription?.plan === "pro_plus" ? "Manage Pro+" : subscription?.plan === "pro" ? "Upgrade to Pro+" : "Upgrade"}
         </Button>
       </Card>
       <Card>

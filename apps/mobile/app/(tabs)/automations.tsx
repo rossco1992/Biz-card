@@ -30,7 +30,11 @@ export default function AutomationsScreen() {
           <Text style={styles.upgradeLink} onPress={() => router.push("/pro")}>Upgrade to Pro</Text> for unlimited follow-ups.
         </Notice>
       ) : (
-        <Notice tone="success">KNCT Pro · Unlimited automatic follow-ups</Notice>
+        <Notice tone="success">
+          {subscription?.plan === "pro_plus"
+            ? "KNCT Pro+ · Unlimited email + automatic text follow-ups"
+            : "KNCT Pro · Unlimited automatic email follow-ups"}
+        </Notice>
       )}
       <ConnectedEmail />
       <SmsFollowups />
