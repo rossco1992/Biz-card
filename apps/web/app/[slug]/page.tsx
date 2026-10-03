@@ -32,6 +32,7 @@ export default async function PublicCardPage({ params }: { params: Promise<{ slu
       <p className="heroCopy">Share your info with {firstName}. Right after, you can save {firstName} directly to your phone.</p>
 
       <ConnectForm profile={profile} />
+      <footer className="publicFooter"><a href="/privacy">Privacy Policy</a></footer>
     </main>
   );
 }

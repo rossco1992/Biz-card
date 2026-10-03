@@ -98,7 +98,7 @@ export function ConnectForm({ profile }: { profile: Profile }) {
       </div>
       <label className="consent">
         <input name="consent" type="checkbox" required />
-        <span>By connecting, you agree to share this information with {profile.full_name} and receive one follow-up email related to this introduction.</span>
+        <span>By connecting, you agree to share this information with {profile.full_name} and receive one follow-up email related to this introduction. See our <a className="privacyLink" href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</span>
       </label>
       <label className="consent">
         <input name="sms_consent" type="checkbox" />

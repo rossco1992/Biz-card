@@ -125,3 +125,18 @@ a { color: inherit; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 a:focus-visible, button:focus-visible { outline: 3px solid var(--copper); outline-offset: 4px; }
 .input:focus, .textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #344f451a; }
+
+
+.legalPage { width: min(100%, 760px); }
+.legalCard { padding: clamp(20px, 4vw, 34px); }
+.legalCard h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 34px 0 10px; }
+.legalCard h2:first-of-type { margin-top: 20px; }
+.legalCard h3 { font-size: 16px; margin: 22px 0 7px; }
+.legalCard p, .legalCard li { color: var(--muted); font-size: 15px; line-height: 1.65; }
+.legalCard p { margin: 0 0 14px; }
+.legalCard ul { margin: 8px 0 18px; padding-left: 22px; }
+.legalCard a, .privacyLink { color: var(--accent); font-weight: 750; }
+.legalFooter { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 12px; padding: 24px 4px 0; }
+.legalFooter a { color: var(--accent); font-weight: 750; }
+.publicFooter { text-align: center; color: var(--muted); font-size: 12px; padding: 22px 0 4px; }
+.publicFooter a { color: var(--accent); font-weight: 750; }
