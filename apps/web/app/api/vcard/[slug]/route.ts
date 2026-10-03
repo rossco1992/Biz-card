@@ -3,7 +3,7 @@ import { getPublicProfile } from "@/lib/profile";
 function escapeVCard(value: string | null | undefined) {
   return String(value ?? "")
     .replaceAll("\\", "\\\\")
-    .replaceAll("\n", "\\n")
+    .replace(/\r\n|\r|\n/g, "\\n")
     .replaceAll(";", "\\;")
     .replaceAll(",", "\\,");
 }

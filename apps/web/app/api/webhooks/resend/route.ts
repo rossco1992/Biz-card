@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { readRequestText, RequestBodyError } from "@/lib/http-security";
 
 type ResendWebhookEvent = {
   type?: string;
@@ -18,7 +19,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook is not configured." }, { status: 500 });
   }
 
-  const payload = await request.text();
+  let payload: string;
+  try {
+    payload = await readRequestText(request, 256 * 1024);
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return NextResponse.json({ error: status === 413 ? "Webhook payload is too large." : "Invalid webhook payload." }, { status });
+  }
   const resend = new Resend(resendKey);
 
   let event: ResendWebhookEvent;

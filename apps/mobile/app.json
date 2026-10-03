@@ -8,7 +8,7 @@
     "scheme": "bizcard",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.bizcard.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -26,6 +26,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {

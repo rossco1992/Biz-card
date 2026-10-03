@@ -4,10 +4,12 @@ export const INVALID_LINK_MESSAGE = "This sign-in link is invalid or has expired
 type SessionResult<T> = { data: { session: T | null }; error: unknown };
 type AuthExchange<T> = {
   exchangeCodeForSession: (code: string) => Promise<SessionResult<T>>;
-  setSession: (tokens: { access_token: string; refresh_token: string }) => Promise<SessionResult<T>>;
 };
 
-/** Ignore unrelated deep links; never log the callback, which contains credentials. */
+/**
+ * Only PKCE authorization codes are accepted. Access and refresh tokens must never
+ * be accepted directly from a deep-link URL.
+ */
 export async function completeAuthCallback<T>(url: string, auth: AuthExchange<T>): Promise<T | null> {
   let parsed: URL;
   try {
@@ -22,14 +24,9 @@ export async function completeAuthCallback<T>(url: string, auth: AuthExchange<T>
   if (params.has("error") || params.has("error_code")) throw new Error(INVALID_LINK_MESSAGE);
 
   const code = params.get("code");
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  let result: SessionResult<T>;
-  if (code) result = await auth.exchangeCodeForSession(code);
-  else if (accessToken && refreshToken) result = await auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-  else throw new Error(INVALID_LINK_MESSAGE);
+  if (!code || !/^[A-Za-z0-9._~-]{1,2048}$/.test(code)) throw new Error(INVALID_LINK_MESSAGE);
 
-  // Supabase returns most errors in the result instead of throwing them.
+  const result = await auth.exchangeCodeForSession(code);
   if (result.error || !result.data.session) throw new Error(INVALID_LINK_MESSAGE);
   return result.data.session;
 }

@@ -1,18 +1,42 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { validEmail } from "@/lib/mailbox-providers";
+import { readJsonBody, RequestBodyError } from "@/lib/http-security";
 import { appendSmsOptOut, buildEventContext, formatEventDate, firstNameFromFullName, mergeTemplate, normalizeNorthAmericanPhone } from "@biz-card/core";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 import { renderSignedEmail } from "@/lib/email-signature";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function clean(value: unknown, max = 200) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+function rateKey(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function requestIp(request: Request) {
+  return clean(
+    request.headers.get("x-vercel-forwarded-for")
+      || request.headers.get("x-forwarded-for")
+      || request.headers.get("x-real-ip")
+      || "unknown",
+    128,
+  ).split(",")[0].trim();
+}
+
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonBody(request, 16 * 1024);
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return NextResponse.json({ error: status === 413 ? "Request is too large." : "Invalid request." }, { status });
+  }
 
   const slug = clean(body.slug, 80).toLowerCase();
   const firstName = clean(body.first_name, 80);
@@ -34,10 +58,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid mobile number to receive the text follow-up." }, { status: 400 });
   }
 
+  const supabase = getSupabaseAdmin();
+  const ip = requestIp(request);
+
+  // Throttle valid-looking requests before the slug lookup so attackers cannot
+  // cheaply enumerate or hammer nonexistent public cards.
+  if (supabase) {
+    const { data: ipAllowed, error: ipRateError } = await supabase.rpc("consume_public_connection_rate", {
+      p_key_hash: rateKey(`ip:${ip}`),
+      p_limit: 60,
+      p_window_seconds: 600,
+    });
+    if (ipRateError) {
+      console.error("public connection IP rate limiter unavailable");
+      return NextResponse.json({ error: "Connecting is temporarily unavailable. Please try again shortly." }, { status: 503 });
+    }
+    if (ipAllowed !== true) {
+      return NextResponse.json(
+        { error: "Too many connection attempts. Please try again in a few minutes." },
+        { status: 429, headers: { "Retry-After": "600", "Cache-Control": "no-store" } },
+      );
+    }
+  }
+
   const profile = await getPublicProfile(slug);
   if (!profile) return NextResponse.json({ error: "Card not found." }, { status: 404 });
-
-  const supabase = getSupabaseAdmin();
 
   // Demo mode lets the public UX be previewed before the backend is connected.
   if (!supabase || String(profile.id).startsWith("demo-")) {
@@ -47,6 +92,45 @@ export async function POST(request: Request) {
       demo: true,
       scheduled_at: new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString(),
     }, { status: 201 });
+  }
+
+  const rateChecks = await Promise.all([
+    supabase.rpc("consume_public_connection_rate", {
+      p_key_hash: rateKey(`profile:${profile.id}`),
+      p_limit: 120,
+      p_window_seconds: 600,
+    }),
+    supabase.rpc("consume_public_connection_rate", {
+      p_key_hash: rateKey(`profile-ip:${profile.id}:${ip}`),
+      p_limit: 30,
+      p_window_seconds: 600,
+    }),
+  ]);
+
+  if (rateChecks.some((result) => result.error)) {
+    console.error("public connection rate limiter unavailable");
+    return NextResponse.json({ error: "Connecting is temporarily unavailable. Please try again shortly." }, { status: 503 });
+  }
+  if (rateChecks.some((result) => result.data !== true)) {
+    return NextResponse.json(
+      { error: "Too many connection attempts. Please try again in a few minutes." },
+      { status: 429, headers: { "Retry-After": "600", "Cache-Control": "no-store" } },
+    );
+  }
+
+  // Suppress accidental double taps/replays without revealing whether a long-term contact exists.
+  const { data: recentDuplicate, error: duplicateError } = await supabase
+    .from("connections")
+    .select("id")
+    .eq("profile_id", profile.id)
+    .eq("email", email)
+    .gte("created_at", new Date(Date.now() - 5 * 60 * 1000).toISOString())
+    .limit(1);
+  if (duplicateError) {
+    return NextResponse.json({ error: "Connecting is temporarily unavailable. Please try again." }, { status: 503 });
+  }
+  if (recentDuplicate?.length) {
+    return NextResponse.json({ ok: true }, { status: 201, headers: { "Cache-Control": "no-store" } });
   }
 
   const mode = profile.active_mode;
@@ -86,9 +170,13 @@ export async function POST(request: Request) {
     if (ready) {
       const { data: allowance, error: allowanceError } = await supabase.rpc("consume_followup_allowance", { p_profile_id: profile.id });
       if (allowanceError) {
-        // Keep existing follow-ups working during the deploy window before
-        // migration 0006 is applied. Once installed, the server enforces Free limits.
-        console.error("follow-up allowance check unavailable; continuing without quota enforcement", allowanceError);
+        console.error("follow-up allowance check unavailable", allowanceError);
+        return NextResponse.json({
+          ok: true,
+          scheduled_at: null,
+          followup_status: "failed",
+          error: "Connection saved, but automatic follow-up is temporarily unavailable.",
+        }, { status: 201, headers: { "Cache-Control": "no-store" } });
       } else if (!allowance?.allowed) {
         return NextResponse.json({
           ok: true,
@@ -220,5 +308,5 @@ export async function POST(request: Request) {
     followup_status: followupStatus,
     sms_scheduled_at: smsScheduledAt,
     sms_followup_status: smsFollowupStatus,
-  }, { status: 201 });
+  }, { status: 201, headers: { "Cache-Control": "no-store" } });
 }
