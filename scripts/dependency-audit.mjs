@@ -14,112 +14,110 @@ try {
   process.exit(1);
 }
 
-const exceptions = {
+const reviewedRoots = {
   braces: {
     advisory: "GHSA-vfj7-8cjw-p6xm",
-    expectedEffect: "micromatch",
-    reason: "Expo/Metro build tooling; upstream advisory currently lists no patched braces version.",
+    reason: "Expo/Metro build tooling; upstream currently has no patched braces release for this advisory.",
   },
   "node-forge": {
     advisory: "GHSA-86w9-cpqp-85rv",
-    expectedEffect: "@expo/code-signing-certificates",
-    reason: "Expo code-signing build tooling; upstream advisory currently lists no patched node-forge version.",
+    reason: "Expo code-signing build tooling; upstream currently has no patched node-forge release for this advisory.",
   },
 };
 
 const vulnerabilities = report.vulnerabilities || {};
-const acceptedRoots = new Set();
-const memo = new Map();
 
-function auditObjects(vulnerability) {
-  return (vulnerability?.via || []).filter(
-    (item) => item && typeof item === "object",
-  );
+function isHigh(severity) {
+  return severity === "high" || severity === "critical";
 }
 
-function inheritedDependencies(vulnerability) {
-  return (vulnerability?.via || []).filter(
-    (item) => typeof item === "string",
-  );
-}
-
-function approvedByReviewedUpstreamChain(name, stack = new Set()) {
-  if (memo.has(name)) return memo.get(name);
-  if (stack.has(name)) return false;
-
+function directHighAdvisories(name) {
   const vulnerability = vulnerabilities[name];
-  if (!vulnerability || !["high", "critical"].includes(vulnerability.severity)) {
-    return false;
-  }
-
-  const exception = exceptions[name];
-  const direct = auditObjects(vulnerability);
-  const inherited = inheritedDependencies(vulnerability);
-
-  if (exception) {
-    const urls = direct
-      .map((item) => item.url)
-      .filter((url) => typeof url === "string");
-    const exactAdvisory =
-      direct.length > 0 &&
-      urls.length === direct.length &&
-      urls.every((url) => url.includes(exception.advisory));
-    const expectedPath =
-      Array.isArray(vulnerability.effects) &&
-      vulnerability.effects.includes(exception.expectedEffect);
-
-    const approved = exactAdvisory && expectedPath;
-    memo.set(name, approved);
-    if (approved) acceptedRoots.add(name);
-    return approved;
-  }
-
-  // Never suppress a package that has its own advisory object. Only packages
-  // whose severity is inherited entirely from an approved dependency chain
-  // may inherit the reviewed exception.
-  if (direct.length > 0 || inherited.length === 0) {
-    memo.set(name, false);
-    return false;
-  }
-
-  const nextStack = new Set(stack);
-  nextStack.add(name);
-  const approved = inherited.every((dependency) =>
-    approvedByReviewedUpstreamChain(dependency, nextStack),
+  return (vulnerability?.via || []).filter(
+    (item) => item && typeof item === "object" && isHigh(item.severity),
   );
-  memo.set(name, approved);
-  return approved;
+}
+
+function dependencyRefs(name) {
+  const vulnerability = vulnerabilities[name];
+  return (vulnerability?.via || []).filter((item) => typeof item === "string");
+}
+
+/**
+ * npm propagates severity upward: Expo/React Native/Metro can all be labelled
+ * "high" because of one advisory several dependencies below. Walk that graph
+ * and judge the actual high/critical advisory roots instead of allowlisting
+ * every parent package name. Cycles in Metro's graph are harmless here because
+ * visited nodes are not revisited.
+ */
+function highAdvisoryRoots(start) {
+  const roots = [];
+  const visited = new Set();
+
+  function visit(name) {
+    if (visited.has(name)) return;
+    visited.add(name);
+
+    for (const advisory of directHighAdvisories(name)) {
+      roots.push({
+        package: name,
+        url: typeof advisory.url === "string" ? advisory.url : "",
+        severity: advisory.severity,
+      });
+    }
+
+    for (const dependency of dependencyRefs(name)) {
+      if (vulnerabilities[dependency]) visit(dependency);
+    }
+  }
+
+  visit(start);
+  return roots;
+}
+
+function isReviewedRoot(root) {
+  const reviewed = reviewedRoots[root.package];
+  return Boolean(
+    reviewed &&
+    root.url &&
+    root.url.includes(reviewed.advisory),
+  );
 }
 
 const blocking = [];
-const inheritedAccepted = [];
+const acceptedParents = [];
+const acceptedRootNames = new Set();
 
 for (const [name, vulnerability] of Object.entries(vulnerabilities)) {
-  if (!["high", "critical"].includes(vulnerability.severity)) continue;
+  if (!isHigh(vulnerability.severity)) continue;
 
-  if (approvedByReviewedUpstreamChain(name)) {
-    if (!exceptions[name]) inheritedAccepted.push(name);
+  const roots = highAdvisoryRoots(name);
+  const approved = roots.length > 0 && roots.every(isReviewedRoot);
+
+  if (approved) {
+    for (const root of roots) acceptedRootNames.add(root.package);
+    if (!reviewedRoots[name]) acceptedParents.push(name);
     continue;
   }
 
   blocking.push({
     name,
     severity: vulnerability.severity,
+    highAdvisoryRoots: roots,
     via: vulnerability.via,
-    effects: vulnerability.effects,
-    isDirect: vulnerability.isDirect,
   });
 }
 
-for (const name of acceptedRoots) {
-  const exception = exceptions[name];
+for (const name of [...acceptedRootNames].sort()) {
+  const reviewed = reviewedRoots[name];
   console.warn(
-    `Accepted reviewed upstream build-tool exception: ${name}: ${exception.advisory} — ${exception.reason}`,
+    `Accepted reviewed upstream build-tool exception: ${name}: ${reviewed.advisory} — ${reviewed.reason}`,
   );
 }
-if (inheritedAccepted.length) {
+
+if (acceptedParents.length) {
   console.warn(
-    `Accepted only inherited severity from reviewed build-tool chains: ${inheritedAccepted.sort().join(", ")}`,
+    `Accepted only inherited severity from reviewed roots: ${[...new Set(acceptedParents)].sort().join(", ")}`,
   );
 }
 
