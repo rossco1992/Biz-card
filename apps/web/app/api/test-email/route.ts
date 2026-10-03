@@ -14,14 +14,22 @@ export async function POST(request: Request) {
     FOLLOWUP_FROM_EMAIL: process.env.FOLLOWUP_FROM_EMAIL,
   });
   if (configError) {
-    return Response.json({ error: configError }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    console.error("Test email configuration is incomplete:", configError);
+    return Response.json(
+      { error: "Test email is temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
   let db: ReturnType<typeof getSupabaseAdmin>;
   try {
     db = getSupabaseAdmin();
-  } catch {
+  } catch (error) {
     // SDK errors can contain configuration values; never forward them.
-    return Response.json({ error: "Supabase settings are present, but the server client could not initialize. Check the Supabase URL and server key values privately in Vercel." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    console.error("Test email Supabase client initialization failed", error instanceof Error ? error.name : "unknown");
+    return Response.json(
+      { error: "Test email is temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
   const key = process.env.RESEND_API_KEY;
   const from = process.env.FOLLOWUP_FROM_EMAIL;

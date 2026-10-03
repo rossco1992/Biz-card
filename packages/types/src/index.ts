@@ -250,6 +250,10 @@ export type Database = {
       profile_has_pro: { Args: { p_profile_id: string }; Returns: boolean };
       profile_has_sms: { Args: { p_profile_id: string }; Returns: boolean };
       consume_followup_allowance: { Args: { p_profile_id: string }; Returns: FollowupAllowance };
+      consume_public_connection_rate: {
+        Args: { p_key_hash: string; p_limit: number; p_window_seconds: number };
+        Returns: boolean;
+      };
       finish_mailbox_connection: { Args: { p_confirmation_hash: string; p_profile_id: string }; Returns: undefined };
       disconnect_mailbox: { Args: { p_profile_id: string }; Returns: undefined };
       claim_mailbox_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };

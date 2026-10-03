@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { sameSecret } from "@/lib/mailbox-crypto";
 import type { SmsSenderStatus } from "@biz-card/types";
 
 export const runtime = "nodejs";
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 function authorized(request: Request) {
   const token = process.env.KNCT_ADMIN_TOKEN;
-  return Boolean(token && request.headers.get("authorization") === `Bearer ${token}`);
+  return Boolean(token && sameSecret(request.headers.get("authorization") || "", `Bearer ${token}`));
 }
 
 function clean(value: unknown, max = 200) {

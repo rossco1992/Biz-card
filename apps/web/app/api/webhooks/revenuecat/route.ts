@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { sameSecret } from "@/lib/mailbox-crypto";
+import { readJsonBody, RequestBodyError } from "@/lib/http-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,13 +15,21 @@ export async function POST(request: Request) {
   const secret = process.env.REVENUECAT_WEBHOOK_AUTH;
   const authorization = request.headers.get("authorization") || "";
 
-  if (!secret || authorization !== `Bearer ${secret}`) {
+  if (!secret || !sameSecret(authorization, `Bearer ${secret}`)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const payload = await request.json().catch(() => null);
-  const event = payload?.event;
-  if (!event?.app_user_id || !event?.type) {
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonBody(request, 256 * 1024);
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return NextResponse.json({ error: status === 413 ? "Webhook payload is too large." : "Invalid RevenueCat event." }, { status });
+  }
+  const event = payload.event as Record<string, unknown> | undefined;
+  const appUserId = typeof event?.app_user_id === "string" ? event.app_user_id : "";
+  const eventType = typeof event?.type === "string" ? event.type : "";
+  if (!event || !appUserId || !eventType) {
     return NextResponse.json({ error: "Invalid RevenueCat event." }, { status: 400 });
   }
 
@@ -29,7 +39,7 @@ export async function POST(request: Request) {
   const { data: profile, error: profileError } = await db
     .from("profiles")
     .select("id")
-    .eq("user_id", event.app_user_id)
+    .eq("user_id", appUserId)
     .maybeSingle();
 
   if (profileError) {
@@ -44,7 +54,7 @@ export async function POST(request: Request) {
   const expiration = isoFromMillis(event.expiration_at_ms);
   const entitlementIds = Array.isArray(event.entitlement_ids) ? event.entitlement_ids.filter((id: unknown): id is string => typeof id === "string") : [];
   const trial = String(event.period_type || "").toUpperCase() === "TRIAL";
-  const type = String(event.type).toUpperCase();
+  const type = eventType.toUpperCase();
 
   let status: "inactive" | "trialing" | "active" | "cancelled" | "billing_issue" | "expired" | "refunded" | null = null;
 

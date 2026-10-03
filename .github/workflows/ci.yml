@@ -6,20 +6,32 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
+
+      - name: Secret hygiene
+        run: node scripts/security-scan.mjs
+
+      - name: High/critical production dependency audit
+        run: node scripts/dependency-audit.mjs
+
+      - name: Native auth callback tests
+        run: node --experimental-strip-types --test apps/mobile/tests/auth-callback.test.mjs
 
       - name: Typecheck
         run: npm run typecheck
@@ -38,6 +50,9 @@ jobs:
 
       - name: Event context database tests
         run: node supabase/tests/event-context.cjs
+
+      - name: Security hardening database tests
+        run: node --test apps/web/tests/security-hardening.test.mjs
 
       - name: Build
         run: npm run build
