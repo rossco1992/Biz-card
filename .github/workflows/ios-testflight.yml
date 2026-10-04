@@ -1,0 +1,65 @@
+name: iOS TestFlight Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit_to_testflight:
+        description: Submit the successful EAS build to TestFlight
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: ios-testflight-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build iOS with EAS
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Mobile sign-in regression tests
+        run: node --experimental-strip-types --test apps/mobile/tests/sign-in.test.mjs
+
+      - name: Verify Expo authentication
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret EXPO_TOKEN. Add an Expo access token in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          npx --yes eas-cli@latest whoami
+
+      - name: Build production iOS app
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest build --platform ios --profile production --non-interactive
+
+      - name: Submit latest build to TestFlight
+        if: ${{ inputs.submit_to_testflight }}
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest submit --platform ios --profile production --latest --non-interactive

@@ -81,15 +81,19 @@ The app uses PKCE, stores its session in native async storage, refreshes credent
 
 ### EAS / TestFlight
 
-`apps/mobile/eas.json` includes development, internal preview, and production profiles. Before the first store build, replace the placeholder iOS bundle identifier and Android package in `apps/mobile/app.json` if those identifiers are not available, then run:
+`apps/mobile/eas.json` includes development, internal preview, and production profiles. Production iOS releases use EAS rather than Xcode Cloud because `apps/mobile/ios` is generated and intentionally not committed.
+
+The repository includes a manual **iOS TestFlight Release** GitHub Actions workflow. Configure the repository secret `EXPO_TOKEN`, keep the production `EXPO_PUBLIC_*` and RevenueCat iOS key in the EAS production environment, then run the workflow from `main`. It can build only or build and submit directly to TestFlight.
+
+For a local release:
 
 ```bash
 cd apps/mobile
 npx eas-cli build --platform ios --profile production
-npx eas-cli submit --platform ios --profile production
+npx eas-cli submit --platform ios --profile production --latest
 ```
 
-Configure the three `EXPO_PUBLIC_*` values as EAS environment variables for preview and production builds.
+Keep the existing iOS bundle identifier `com.bizcard.mobile` so releases continue targeting the same App Store Connect app. See `docs/eas-testflight-release.md` for the one-time credential setup and release procedure.
 
 ## Web app setup
 
