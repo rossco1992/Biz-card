@@ -1,9 +1,11 @@
+import { smsAvailable, SMS_UNAVAILABLE_MESSAGE } from "./sms-availability";
 type TwilioSender = {
   twilio_subaccount_sid: string | null;
   messaging_service_sid: string | null;
 };
 
 function config() {
+  if (!smsAvailable()) throw new Error(SMS_UNAVAILABLE_MESSAGE);
   const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
   const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
   if (!accountSid || !authToken) throw new Error("Twilio is not configured.");

@@ -1,5 +1,11 @@
 # Automatic SMS follow-ups
 
+## Launch status: deferred
+
+The current launch offers Free and Pro email features only. Mobile SMS controls and Pro+ sales are hidden, and the public card no longer requests SMS consent. `apps/web/lib/sms-availability.ts` disables sender requests, test sends, new SMS scheduling, and Twilio delivery. The follow-up worker cancels claimed SMS jobs while continuing email processing. These protections take effect after the web deployment; mobile UI changes require a new app build.
+
+Keep existing SMS tables, provisioning code, and entitlement records for later. Existing Pro+ entitlements continue to grant Pro email access. Before re-enabling SMS, complete carrier provisioning, review/cancel any remaining queued texts, restore appropriate offerings, and release the matching app UI.
+
 KNCT owns the texting integration. End users do **not** create a Twilio account, copy API keys, or leave the KNCT app.
 
 ## Runtime model

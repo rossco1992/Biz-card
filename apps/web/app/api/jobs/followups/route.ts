@@ -1,3 +1,4 @@
+import { smsAvailable, SMS_UNAVAILABLE_MESSAGE } from "@/lib/sms-availability";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sameSecret, seal, unseal } from "@/lib/mailbox-crypto";
@@ -70,6 +71,13 @@ export async function GET(request: Request) {
       return result.status;
     }));
     const smsResults = await Promise.all((smsJobs || []).map(async job => {
+      if (!smsAvailable()) {
+        const { error: saveError } = await db.from("followups")
+          .update({ status: "cancelled", error: SMS_UNAVAILABLE_MESSAGE, updated_at: new Date().toISOString() })
+          .eq("id", job.id).eq("status", "sending");
+        if (saveError) throw saveError;
+        return "cancelled";
+      }
       if (!job.recipient_phone) {
         const result = { status: "failed" as const, error: "Text recipient is missing." };
         const { error: saveError } = await db.from("followups").update({ ...result, updated_at: new Date().toISOString() }).eq("id", job.id).eq("status", "sending");

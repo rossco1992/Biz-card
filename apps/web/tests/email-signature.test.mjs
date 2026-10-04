@@ -43,9 +43,9 @@ test('signature endpoint requires an owner and saves only sanitized profile-scop
  assert.equal((await POST(req(false))).status,200);assert.equal(writes.length,0);
  assert.equal((await POST(req(true))).status,200);assert.equal(writes[0].v,'owner');assert.equal(writes[0].data.email_signature_html,'<b>Ross</b>');
 });
-test('migration preserves legacy rows and adds nullable snapshots',async()=>{
+test('migrated schema includes HTML signature and snapshot columns',async()=>{
  const db=await database();try{
- await db.exec(readFileSync(new URL('../../../supabase/migrations/0007_html_signatures.sql',import.meta.url),'utf8'));
+ // database() already applies the HTML signature migration.
  const result=await db.query(`select column_name from information_schema.columns where table_schema='public' and column_name in ('email_signature_html','body_html_snapshot')`);
  assert.equal(result.rows.length,2);
  }finally{await db.close();}

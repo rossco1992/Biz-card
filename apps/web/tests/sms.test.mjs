@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { loadSource, database } from "./mailbox-harness.mjs";
 
 process.env.TWILIO_ACCOUNT_SID = "AC11111111111111111111111111111111";
 process.env.TWILIO_AUTH_TOKEN = "twilio-secret";
 
-const twilio = loadSource("lib/twilio-sms.ts");
+// Exercise the retained provider implementation separately from launch availability.
+const twilio = loadSource("lib/twilio-sms.ts", {
+  [fileURLToPath(new URL("../lib/sms-availability.ts", import.meta.url))]: { smsAvailable: () => true },
+});
 const { deliverSmsJob } = loadSource("lib/sms-delivery.ts");
 const originalFetch = globalThis.fetch;
 after(() => { globalThis.fetch = originalFetch; });

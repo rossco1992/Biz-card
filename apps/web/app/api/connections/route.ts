@@ -1,3 +1,4 @@
+import { smsAvailable } from "@/lib/sms-availability";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { validEmail } from "@/lib/mailbox-providers";
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
   const email = clean(body.email, 180).toLowerCase();
   const phone = clean(body.phone, 40);
   const consent = body.consent === true;
-  const smsConsent = body.sms_consent === true;
+  const smsConsent = smsAvailable() && body.sms_consent === true;
   const normalizedPhone = normalizeNorthAmericanPhone(phone);
 
   if (!slug || !firstName || !email || !consent) {

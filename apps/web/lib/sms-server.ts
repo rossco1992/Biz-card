@@ -1,3 +1,4 @@
+import { smsAvailable, SMS_UNAVAILABLE_MESSAGE } from "./sms-availability";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { NextResponse } from "next/server";
 
@@ -10,6 +11,7 @@ export class SmsHttpError extends Error {
 }
 
 export async function smsOwner(request: Request) {
+  if (!smsAvailable()) throw new SmsHttpError(SMS_UNAVAILABLE_MESSAGE, 503);
   const db = getSupabaseAdmin();
   if (!db) throw new SmsHttpError("Text follow-ups are not available yet.", 503);
 
