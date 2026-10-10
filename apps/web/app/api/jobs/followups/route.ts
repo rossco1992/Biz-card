@@ -6,6 +6,7 @@ import { refreshMailboxToken, sendMailboxMessage } from "@/lib/mailbox-providers
 import { deliverMailboxJob } from "@/lib/mailbox-delivery";
 import { deliverSmsJob } from "@/lib/sms-delivery";
 import { sendTwilioSms } from "@/lib/twilio-sms";
+import { sendExpoPush } from "@/lib/expo-push";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,11 +17,16 @@ export async function GET(request: Request) {
   const db = getSupabaseAdmin();
   if (!db) return NextResponse.json({ error: "Database unavailable." }, { status: 503 });
   try {
-    const [{ data: jobs, error }, { data: smsJobs, error: smsClaimError }] = await Promise.all([
+    const [
+      { data: jobs, error },
+      { data: smsJobs, error: smsClaimError },
+      { data: deviceSmsJobs, error: deviceSmsClaimError },
+    ] = await Promise.all([
       db.rpc("claim_mailbox_followups", { batch_size: 4 }),
       db.rpc("claim_sms_followups", { batch_size: 4 }),
+      db.rpc("claim_device_sms_reminders", { batch_size: 8 }),
     ]);
-    if (error || smsClaimError) throw error || smsClaimError;
+    if (error || smsClaimError || deviceSmsClaimError) throw error || smsClaimError || deviceSmsClaimError;
 
     const results = await Promise.all((jobs || []).map(async job => {
       if (!job.recipient_email) {
@@ -133,7 +139,65 @@ export async function GET(request: Request) {
       return result.status;
     }));
 
-    const all = [...results, ...smsResults];
+    const deviceSmsResults = await Promise.all((deviceSmsJobs || []).map(async job => {
+      if (!job.recipient_phone) {
+        const { error: saveError } = await db.from("followups")
+          .update({ status: "failed", error: "Text recipient is missing.", updated_at: new Date().toISOString() })
+          .eq("id", job.id).eq("status", "scheduled");
+        if (saveError) throw saveError;
+        return "failed";
+      }
+
+      const [{ data: connection, error: connectionError }, { data: devices, error: devicesError }] = await Promise.all([
+        db.from("connections").select("first_name,last_name").eq("id", job.connection_id).eq("profile_id", job.profile_id).maybeSingle(),
+        db.from("push_devices").select("expo_push_token").eq("profile_id", job.profile_id).eq("active", true),
+      ]);
+      if (connectionError || devicesError) throw connectionError || devicesError;
+
+      const tokens = (devices || []).map(device => device.expo_push_token).filter(Boolean);
+      if (!tokens.length) {
+        const { error: saveError } = await db.from("followups")
+          .update({ error: "Enable KNCT notifications to receive text reminders.", updated_at: new Date().toISOString() })
+          .eq("id", job.id).eq("status", "scheduled");
+        if (saveError) throw saveError;
+        return "failed";
+      }
+
+      const name = [connection?.first_name, connection?.last_name].filter(Boolean).join(" ") || "your new connection";
+      try {
+        const push = await sendExpoPush(tokens, {
+          title: `Time to follow up with ${name}`,
+          body: "Your text is ready. Tap to open Messages.",
+          data: { kind: "text_followup", followupId: job.id },
+        });
+
+        if (push.invalidTokens.length) {
+          const { error: deactivateError } = await db.from("push_devices")
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq("profile_id", job.profile_id)
+            .in("expo_push_token", push.invalidTokens);
+          if (deactivateError) throw deactivateError;
+        }
+
+        const { error: saveError } = await db.from("followups")
+          .update({
+            error: push.acceptedIds.length ? null : "KNCT could not deliver this text reminder. Open the app to send it manually.",
+            provider_message_id: push.acceptedIds[0] ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", job.id).eq("status", "scheduled");
+        if (saveError) throw saveError;
+        return push.acceptedIds.length ? "notified" : "failed";
+      } catch {
+        const { error: saveError } = await db.from("followups")
+          .update({ error: "KNCT could not deliver this text reminder. Open the app to send it manually.", updated_at: new Date().toISOString() })
+          .eq("id", job.id).eq("status", "scheduled");
+        if (saveError) throw saveError;
+        return "failed";
+      }
+    }));
+
+    const all = [...results, ...smsResults, ...deviceSmsResults];
     return NextResponse.json({
       processed: all.length,
       sent: all.filter(s => s === "sent").length,
@@ -146,6 +210,10 @@ export async function GET(request: Request) {
       sms: {
         processed: smsResults.length,
         sent: smsResults.filter(s => s === "sent").length,
+      },
+      text_reminders: {
+        processed: deviceSmsResults.length,
+        notified: deviceSmsResults.filter(s => s === "notified").length,
       },
     }, { headers: { "Cache-Control": "no-store" } });
   } catch { return NextResponse.json({ error: "Follow-up processing needs attention. Inspect the queue before retrying individual messages." }, { status: 503 }); }
