@@ -26,7 +26,8 @@ export async function GET(request: Request) {
       db.rpc("claim_sms_followups", { batch_size: 4 }),
       db.rpc("claim_device_sms_reminders", { batch_size: 8 }),
     ]);
-    if (error || smsClaimError || deviceSmsClaimError) throw error || smsClaimError || deviceSmsClaimError;
+    if (error || smsClaimError) throw error || smsClaimError;
+    if (deviceSmsClaimError) console.error("device text reminder queue unavailable", deviceSmsClaimError);
 
     const results = await Promise.all((jobs || []).map(async job => {
       if (!job.recipient_email) {
@@ -139,7 +140,7 @@ export async function GET(request: Request) {
       return result.status;
     }));
 
-    const deviceSmsResults = await Promise.all((deviceSmsJobs || []).map(async job => {
+    const deviceSmsResults = await Promise.all((deviceSmsClaimError ? [] : deviceSmsJobs || []).map(async job => {
       if (!job.recipient_phone) {
         const { error: saveError } = await db.from("followups")
           .update({ status: "failed", error: "Text recipient is missing.", updated_at: new Date().toISOString() })
