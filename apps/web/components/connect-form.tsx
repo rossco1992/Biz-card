@@ -97,7 +97,7 @@ export function ConnectForm({ profile }: { profile: Profile }) {
       </div>
       <label className="consent">
         <input name="consent" type="checkbox" required />
-        <span>By connecting, you agree to share this information with {profile.full_name} and receive one follow-up email related to this introduction. See our <a className="privacyLink" href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</span>
+        <span>By connecting, you agree to share this information with {profile.full_name} and receive a follow-up related to this introduction by email or text. See our <a className="privacyLink" href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</span>
       </label>
       <button className="primaryButton" type="submit" disabled={status === "submitting"}>
         {status === "submitting" ? "Connecting…" : "Swap contacts"}
