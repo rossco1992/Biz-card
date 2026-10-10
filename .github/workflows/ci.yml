@@ -27,9 +27,6 @@ jobs:
       - name: Secret hygiene
         run: node scripts/security-scan.mjs
 
-      - name: High/critical production dependency audit
-        run: node scripts/dependency-audit.mjs
-
       - name: Native auth callback tests
         run: node --experimental-strip-types --test apps/mobile/tests/auth-callback.test.mjs
 
@@ -56,3 +53,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: High/critical production dependency audit
+        run: node scripts/dependency-audit.mjs
