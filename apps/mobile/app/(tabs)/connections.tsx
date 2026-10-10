@@ -1,7 +1,8 @@
+import { router } from "expo-router";
 import { connectionName, getConnectionFollowupByChannel } from "@biz-card/core";
 import type { Connection, Followup } from "@biz-card/types";
 import { useMemo, useState } from "react";
-import { FlatList, Platform, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState, KeyboardFrame, Notice, PageHeader } from "@/components/ui";
 import { colors, radii } from "@/constants/theme";
 import { useSession } from "@/providers/session-provider";
@@ -10,12 +11,17 @@ function when(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
-function statusFor(followup: Pick<Followup, "status" | "send_at" | "sent_at" | "error" | "channel"> | undefined) {
+function statusFor(followup: Pick<Followup, "status" | "send_at" | "sent_at" | "reminded_at" | "delivery_provider" | "error" | "channel"> | undefined) {
   if (!followup) return null;
   if (followup.status === "sent") return { label: "Sent", tone: "success" };
   if (followup.status === "sending") return { label: "Sending", tone: "scheduled" };
-  if (followup.status === "failed") return { label: "Needs attention", tone: "danger" };
+  if (followup.status === "failed" || (followup.channel === "sms" && followup.error)) return { label: "Needs attention", tone: "danger" };
   if (followup.status === "cancelled") return { label: "Cancelled", tone: "neutral" };
+  if (followup.channel === "sms" && followup.delivery_provider === "device") {
+    return followup.reminded_at
+      ? { label: "Ready to text", tone: "scheduled" }
+      : { label: `Reminds ${when(followup.send_at)}`, tone: "scheduled" };
+  }
   return { label: `Sends ${when(followup.send_at)}`, tone: "scheduled" };
 }
 
@@ -54,11 +60,21 @@ export default function ConnectionsScreen() {
                 <Text numberOfLines={1} style={styles.email}>{item.email}</Text>
                 <Text style={styles.meta}>{item.event_name_snapshot ? `${item.event_name_snapshot} · ${item.event_location_snapshot || "Event"} · ${when(item.created_at)}` : `${item.mode_name_snapshot || "No mode"} · ${when(item.created_at)}`}</Text>
                 {emailFollowup?.status === "failed" ? <Text style={styles.meta}>Email: {emailFollowup.error || "Check your email connection."}</Text> : null}
-                {smsFollowup?.status === "failed" ? <Text style={styles.meta}>Text: {smsFollowup.error || "Check your texting setup."}</Text> : null}
+                {smsFollowup?.error ? <Text style={styles.meta}>Text: {smsFollowup.error}</Text> : null}
               </View>
               <View style={styles.statusStack}>
                 {emailStatus ? <View style={[styles.status, emailStatus.tone === "success" && styles.success, emailStatus.tone === "danger" && styles.danger, emailStatus.tone === "scheduled" && styles.scheduled]}><Text style={styles.channelLabel}>Email</Text><Text style={styles.statusText}>{emailStatus.label}</Text></View> : null}
-                {smsStatus ? <View style={[styles.status, smsStatus.tone === "success" && styles.success, smsStatus.tone === "danger" && styles.danger, smsStatus.tone === "scheduled" && styles.scheduled]}><Text style={styles.channelLabel}>Text</Text><Text style={styles.statusText}>{smsStatus.label}</Text></View> : null}
+                {smsStatus ? (
+                  <Pressable
+                    disabled={smsFollowup?.delivery_provider !== "device" || smsFollowup?.status !== "scheduled"}
+                    onPress={() => smsFollowup?.id && router.push({ pathname: "/text-followup", params: { followupId: smsFollowup.id } })}
+                  >
+                    <View style={[styles.status, smsStatus.tone === "success" && styles.success, smsStatus.tone === "danger" && styles.danger, smsStatus.tone === "scheduled" && styles.scheduled]}>
+                      <Text style={styles.channelLabel}>Text</Text>
+                      <Text style={styles.statusText}>{smsStatus.label}</Text>
+                    </View>
+                  </Pressable>
+                ) : null}
                 {!emailStatus && !smsStatus ? <View style={styles.status}><Text style={styles.statusText}>No follow-up</Text></View> : null}
               </View>
             </View>
