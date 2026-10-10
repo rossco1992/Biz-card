@@ -185,8 +185,8 @@ export type Connection = {
   event_name_snapshot: string | null;
   event_location_snapshot: string | null;
   created_at: string;
-  followups?: Pick<Followup, "id" | "channel" | "status" | "send_at" | "sent_at" | "reminded_at" | "delivery_provider" | "error">
-    | Pick<Followup, "id" | "channel" | "status" | "send_at" | "sent_at" | "reminded_at" | "delivery_provider" | "error">[]
+  followups?: Pick<Followup, "id" | "channel" | "status" | "send_at" | "sent_at" | "delivery_provider" | "error">
+    | Pick<Followup, "id" | "channel" | "status" | "send_at" | "sent_at" | "delivery_provider" | "error">[]
     | null;
 };
 
