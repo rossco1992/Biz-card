@@ -1,6 +1,16 @@
 export type FollowupStatus = "scheduled" | "sending" | "sent" | "cancelled" | "failed";
 export type FollowupChannel = "email" | "sms";
 export type SmsSenderStatus = "requested" | "pending" | "approved" | "rejected" | "suspended";
+export type PushDevice = {
+  id: string;
+  profile_id: string;
+  expo_push_token: string;
+  platform: "ios" | "android";
+  active: boolean;
+  last_seen_at: string;
+  created_at: string;
+  updated_at: string;
+};
 export type MailProvider = "google" | "microsoft";
 export type Mailbox = {
   profile_id: string;
@@ -138,7 +148,7 @@ export type Event = {
 };
 
 export type Followup = {
-  delivery_provider?: "resend" | "unconnected" | "twilio" | MailProvider;
+  delivery_provider?: "resend" | "unconnected" | "twilio" | "device" | MailProvider;
   channel: FollowupChannel;
   mailbox_id?: string | null;
   id: string;
@@ -153,6 +163,7 @@ export type Followup = {
   body_snapshot: string;
   body_html_snapshot?: string | null;
   sent_at: string | null;
+  reminded_at: string | null;
   provider_message_id: string | null;
   error: string | null;
   created_at?: string;
@@ -174,8 +185,8 @@ export type Connection = {
   event_name_snapshot: string | null;
   event_location_snapshot: string | null;
   created_at: string;
-  followups?: Pick<Followup, "channel" | "status" | "send_at" | "sent_at" | "error">
-    | Pick<Followup, "channel" | "status" | "send_at" | "sent_at" | "error">[]
+  followups?: Pick<Followup, "id" | "channel" | "status" | "send_at" | "sent_at" | "reminded_at" | "delivery_provider" | "error">
+    | Pick<Followup, "id" | "channel" | "status" | "send_at" | "sent_at" | "reminded_at" | "delivery_provider" | "error">[]
     | null;
 };
 
@@ -200,6 +211,7 @@ export type Database = {
       profile_entitlements: RowShape<ProfileEntitlement, ProfileEntitlement, Partial<ProfileEntitlement>>;
       followup_usage: RowShape<FollowupUsage, FollowupUsage, Partial<FollowupUsage>>;
       sms_senders: RowShape<SmsSender, Partial<SmsSender> & Pick<SmsSender, "profile_id">, Partial<SmsSender>>;
+      push_devices: RowShape<PushDevice, Omit<PushDevice, "id" | "created_at" | "updated_at"> & Partial<Pick<PushDevice, "id" | "created_at" | "updated_at">>, Partial<PushDevice>>;
       mailboxes: RowShape<Mailbox, Mailbox, Partial<Mailbox>>;
       mailbox_oauth_states: RowShape<MailboxOAuthState, MailboxOAuthState, Partial<MailboxOAuthState>>;
       profiles: RowShape<
@@ -235,7 +247,7 @@ export type Database = {
       >;
       followups: RowShape<
         Required<Followup>,
-        Omit<Followup, "id" | "sent_at" | "provider_message_id" | "error" | "created_at" | "updated_at"> & Partial<Pick<Followup, "id" | "sent_at" | "provider_message_id" | "error" | "created_at" | "updated_at">>,
+        Omit<Followup, "id" | "sent_at" | "reminded_at" | "provider_message_id" | "error" | "created_at" | "updated_at"> & Partial<Pick<Followup, "id" | "sent_at" | "reminded_at" | "provider_message_id" | "error" | "created_at" | "updated_at">>,
         Partial<Omit<Followup, "id" | "profile_id" | "connection_id">>,
         [
           Relationship<"followups_connection_id_fkey", "connection_id", "connections">,
@@ -258,6 +270,7 @@ export type Database = {
       disconnect_mailbox: { Args: { p_profile_id: string }; Returns: undefined };
       claim_mailbox_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
       claim_sms_followups: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
+      claim_device_sms_reminders: { Args: { batch_size?: number }; Returns: Required<Followup>[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
