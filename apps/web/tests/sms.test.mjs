@@ -176,3 +176,44 @@ test("real SQL: Pro does not unlock SMS but Pro+ does", async () => {
     await db.close();
   }
 });
+
+test("real SQL: device SMS reminders are claimed once without marking the text sent", async () => {
+  const db = await database();
+  try {
+    const profile = randomUUID();
+    const connection = randomUUID();
+    const followup = randomUUID();
+    await db.query(
+      "insert into profiles(id,slug,full_name,email) values ($1,'device-reminder','Device Reminder','owner@example.com')",
+      [profile],
+    );
+    await db.query(
+      "insert into connections(id,profile_id,first_name,email,phone,consent_at) values ($1,$2,'Jamie','jamie@example.com','+17325550123',now())",
+      [connection, profile],
+    );
+    await db.query(
+      "insert into followups(id,connection_id,profile_id,channel,recipient_email,recipient_phone,send_at,subject_snapshot,body_snapshot,delivery_provider) values ($1,$2,$3,'sms',null,'+17325550123',now()-interval '1 minute','Text follow-up','Great meeting you','device')",
+      [followup, connection, profile],
+    );
+
+    const claimed = await db.query("select * from claim_device_sms_reminders(10)");
+    assert.deepEqual(claimed.rows.map(row => row.id), [followup]);
+    assert.equal(claimed.rows[0].status, "scheduled");
+    assert.ok(claimed.rows[0].reminded_at);
+    assert.equal((await db.query("select * from claim_device_sms_reminders(10)")).rows.length, 0);
+
+    const persisted = (await db.query("select status,sent_at,reminded_at from followups where id=$1", [followup])).rows[0];
+    assert.equal(persisted.status, "scheduled");
+    assert.equal(persisted.sent_at, null);
+    assert.ok(persisted.reminded_at);
+
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`set role ${role}`);
+      await assert.rejects(db.query("select * from push_devices"), /permission denied/);
+      await assert.rejects(db.query("select * from claim_device_sms_reminders(1)"), /permission denied/);
+      await db.exec("reset role");
+    }
+  } finally {
+    await db.close();
+  }
+});
