@@ -8,6 +8,7 @@ type ExpoPushTicket = {
 export type ExpoPushResult = {
   acceptedIds: string[];
   rejectedTokens: string[];
+  invalidTokens: string[];
 };
 
 function chunks<T>(items: T[], size: number) {
@@ -23,6 +24,7 @@ export async function sendExpoPush(
   const uniqueTokens = [...new Set(tokens)].filter(Boolean);
   const acceptedIds: string[] = [];
   const rejectedTokens: string[] = [];
+  const invalidTokens: string[] = [];
 
   for (const batch of chunks(uniqueTokens, 100)) {
     const headers: Record<string, string> = {
@@ -55,9 +57,10 @@ export async function sendExpoPush(
         if (ticket.id) acceptedIds.push(ticket.id);
       } else {
         rejectedTokens.push(token);
+        if (ticket?.details?.error === "DeviceNotRegistered") invalidTokens.push(token);
       }
     });
   }
 
-  return { acceptedIds, rejectedTokens };
+  return { acceptedIds, rejectedTokens, invalidTokens };
 }
