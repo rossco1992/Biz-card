@@ -90,14 +90,14 @@ export default function ModeEditor() {
         </View>
         <View style={styles.signatureRow}>
           <View style={styles.signatureCopy}>
-            <Text style={styles.signatureTitle}>Also send a text</Text>
-            <Text style={uiStyles.small}>Uses your dedicated KNCT texting number when texting is approved and enabled.</Text>
+            <Text style={styles.signatureTitle}>Remind me to text</Text>
+            <Text style={uiStyles.small}>At follow-up time, KNCT notifies you and opens Messages with this text ready to send.</Text>
           </View>
           <Switch value={smsEnabled} onValueChange={setSmsEnabled} trackColor={{ false: "#CCD0CD", true: colors.accent }} thumbColor={smsEnabled ? colors.accent : "#F8F8F6"} />
         </View>
         {smsEnabled ? <>
           <TemplateField label="Text message" value={smsBody} onChangeText={setSmsBody} multiline disabled={busy} />
-          <Text style={uiStyles.small}>KNCT automatically adds the required opt-out instruction when the text is queued.</Text>
+          <Text style={uiStyles.small}>The text sends from your own Messages account only after you tap Send.</Text>
         </> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
         <Button onPress={() => void save()} loading={busy} disabled={busy || (!creating && !mode) || !name.trim() || !subject.trim() || !body.trim() || (smsEnabled && !smsBody.trim()) || !Number.isFinite(Number(delay))}>Save mode</Button>
