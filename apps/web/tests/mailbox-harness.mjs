@@ -25,7 +25,7 @@ export async function database() {
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql as 'select null::uuid';`);
-  for (const name of ["0001_initial_schema", "0002_owner_onboarding", "0003_connected_email", "0005_event_context_and_signatures", "0006_free_pro_entitlements", "0007_html_signatures", "0008_event_date", "0009_sms_followups", "0010_pro_plus_sms_entitlement", "0011_security_hardening"]) {
+  for (const name of ["0001_initial_schema", "0002_owner_onboarding", "0003_connected_email", "0005_event_context_and_signatures", "0006_free_pro_entitlements", "0007_html_signatures", "0008_event_date", "0009_sms_followups", "0010_pro_plus_sms_entitlement", "0011_security_hardening", "0012_device_text_reminders"]) {
     // PGlite has core gen_random_uuid; it does not ship the separate pgcrypto extension.
     const sql = readFileSync(new URL(`../../../supabase/migrations/${name}.sql`, import.meta.url), "utf8").replace("create extension if not exists pgcrypto;", "");
     await db.exec(sql);
