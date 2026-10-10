@@ -11,14 +11,14 @@ function when(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
-function statusFor(followup: Pick<Followup, "status" | "send_at" | "sent_at" | "reminded_at" | "delivery_provider" | "error" | "channel"> | undefined) {
+function statusFor(followup: Pick<Followup, "status" | "send_at" | "sent_at" | "delivery_provider" | "error" | "channel"> | undefined) {
   if (!followup) return null;
   if (followup.status === "sent") return { label: "Sent", tone: "success" };
   if (followup.status === "sending") return { label: "Sending", tone: "scheduled" };
   if (followup.status === "failed" || (followup.channel === "sms" && followup.error)) return { label: "Needs attention", tone: "danger" };
   if (followup.status === "cancelled") return { label: "Cancelled", tone: "neutral" };
   if (followup.channel === "sms" && followup.delivery_provider === "device") {
-    return followup.reminded_at
+    return new Date(followup.send_at).getTime() <= Date.now()
       ? { label: "Ready to text", tone: "scheduled" }
       : { label: `Reminds ${when(followup.send_at)}`, tone: "scheduled" };
   }
