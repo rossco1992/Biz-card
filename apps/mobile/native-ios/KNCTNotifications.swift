@@ -65,16 +65,6 @@ final class KNCTNotifications: RCTEventEmitter {
         KNCTNotifications.pendingResolve = resolve
         KNCTNotifications.pendingReject = reject
         UIApplication.shared.registerForRemoteNotifications()
-
-        if let token = KNCTNotifications.deviceToken {
-          KNCTNotifications.pendingResolve = nil
-          KNCTNotifications.pendingReject = nil
-          resolve([
-            "granted": true,
-            "deviceToken": token,
-            "environment": KNCTNotifications.environment,
-          ])
-        }
       }
     }
   }
