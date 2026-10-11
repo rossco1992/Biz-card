@@ -6,7 +6,7 @@ import { refreshMailboxToken, sendMailboxMessage } from "@/lib/mailbox-providers
 import { deliverMailboxJob } from "@/lib/mailbox-delivery";
 import { deliverSmsJob } from "@/lib/sms-delivery";
 import { sendTwilioSms } from "@/lib/twilio-sms";
-import { sendExpoPush } from "@/lib/expo-push";
+import { apnsConfigured, sendApnsNotification } from "@/lib/apns";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -151,12 +151,16 @@ export async function GET(request: Request) {
 
       const [{ data: connection, error: connectionError }, { data: devices, error: devicesError }] = await Promise.all([
         db.from("connections").select("first_name,last_name").eq("id", job.connection_id).eq("profile_id", job.profile_id).maybeSingle(),
-        db.from("push_devices").select("expo_push_token").eq("profile_id", job.profile_id).eq("active", true),
+        db.from("push_devices")
+          .select("device_token,environment")
+          .eq("profile_id", job.profile_id)
+          .eq("provider", "apns")
+          .eq("platform", "ios")
+          .eq("active", true),
       ]);
       if (connectionError || devicesError) throw connectionError || devicesError;
 
-      const tokens = (devices || []).map(device => device.expo_push_token).filter(Boolean);
-      if (!tokens.length) {
+      if (!devices?.length) {
         const { error: saveError } = await db.from("followups")
           .update({ error: "Enable KNCT notifications to receive text reminders.", updated_at: new Date().toISOString() })
           .eq("id", job.id).eq("status", "scheduled");
@@ -164,38 +168,55 @@ export async function GET(request: Request) {
         return "failed";
       }
 
-      const name = [connection?.first_name, connection?.last_name].filter(Boolean).join(" ") || "your new connection";
-      try {
-        const push = await sendExpoPush(tokens, {
-          title: `Time to follow up with ${name}`,
-          body: "Your text is ready. Tap to open Messages.",
-          data: { kind: "text_followup", followupId: job.id },
-        });
-
-        if (push.invalidTokens.length) {
-          const { error: deactivateError } = await db.from("push_devices")
-            .update({ active: false, updated_at: new Date().toISOString() })
-            .eq("profile_id", job.profile_id)
-            .in("expo_push_token", push.invalidTokens);
-          if (deactivateError) throw deactivateError;
-        }
-
+      if (!apnsConfigured()) {
         const { error: saveError } = await db.from("followups")
-          .update({
-            error: push.acceptedIds.length ? null : "KNCT could not deliver this text reminder. Open the app to send it manually.",
-            provider_message_id: push.acceptedIds[0] ?? null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", job.id).eq("status", "scheduled");
-        if (saveError) throw saveError;
-        return push.acceptedIds.length ? "notified" : "failed";
-      } catch {
-        const { error: saveError } = await db.from("followups")
-          .update({ error: "KNCT could not deliver this text reminder. Open the app to send it manually.", updated_at: new Date().toISOString() })
+          .update({ error: "Apple push delivery is not configured.", updated_at: new Date().toISOString() })
           .eq("id", job.id).eq("status", "scheduled");
         if (saveError) throw saveError;
         return "failed";
       }
+
+      const name = [connection?.first_name, connection?.last_name].filter(Boolean).join(" ") || "your new connection";
+      const deliveries = await Promise.all(devices.map(async device => ({
+        device,
+        result: await sendApnsNotification(
+          device.device_token,
+          device.environment as "development" | "production",
+          {
+            title: `Time to follow up with ${name}`,
+            body: "Your text is ready. Tap to open Messages.",
+            data: { kind: "text_followup", followupId: job.id },
+          },
+        ).catch(() => ({
+          accepted: false,
+          apnsId: null,
+          invalidToken: false,
+          reason: "APNs request failed.",
+        })),
+      })));
+
+      const invalidTokens = deliveries
+        .filter(item => item.result.invalidToken)
+        .map(item => item.device.device_token);
+      if (invalidTokens.length) {
+        const { error: deactivateError } = await db.from("push_devices")
+          .update({ active: false, updated_at: new Date().toISOString() })
+          .eq("profile_id", job.profile_id)
+          .in("device_token", invalidTokens);
+        if (deactivateError) throw deactivateError;
+      }
+
+      const accepted = deliveries.filter(item => item.result.accepted);
+      const { error: saveError } = await db.from("followups")
+        .update({
+          error: accepted.length ? null : "KNCT could not deliver this text reminder. Open the app to send it manually.",
+          provider_message_id: accepted[0]?.result.apnsId ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", job.id).eq("status", "scheduled");
+      if (saveError) throw saveError;
+
+      return accepted.length ? "notified" : "failed";
     }));
 
     const all = [...results, ...smsResults, ...deviceSmsResults];
