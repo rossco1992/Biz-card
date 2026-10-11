@@ -40,14 +40,36 @@ alter table public.push_devices
 update public.push_devices
 set active = false,
     updated_at = now()
-where provider = 'apns';
+where provider = 'apns'
+  and (
+    device_token !~ '^[0-9A-Fa-f]+
 
--- APNs device tokens are opaque and Apple explicitly warns not to hard-code their size.
--- The app serializes the bytes as lowercase hexadecimal before registration.
+create index if not exists push_devices_profile_provider_active_idx
+  on public.push_devices (profile_id, provider, active);
+
+-- Keep the 0012 queue function and followups.reminded_at column. They are provider-
+-- agnostic and remain correct for native APNs reminders.
+
+    or length(device_token) not between 16 and 512
+  );
+
+-- APNs device tokens are opaque and Apple explicitly warns not to hard-code their
+-- byte size. We only require the app's hexadecimal serialization for active rows;
+-- inactive 0012-era rows remain as harmless migration history.
 alter table public.push_devices drop constraint if exists push_devices_device_token_format_check;
 alter table public.push_devices
   add constraint push_devices_device_token_format_check
-  check (device_token ~ '^[0-9A-Fa-f]+$' and length(device_token) between 16 and 512);
+  check (
+    not active
+    or (device_token ~ '^[0-9A-Fa-f]+
+
+create index if not exists push_devices_profile_provider_active_idx
+  on public.push_devices (profile_id, provider, active);
+
+-- Keep the 0012 queue function and followups.reminded_at column. They are provider-
+-- agnostic and remain correct for native APNs reminders.
+ and length(device_token) between 16 and 512)
+  );
 
 create index if not exists push_devices_profile_provider_active_idx
   on public.push_devices (profile_id, provider, active);
