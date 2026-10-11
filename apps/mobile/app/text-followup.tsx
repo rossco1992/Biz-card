@@ -1,4 +1,4 @@
-import * as SMS from "expo-sms";
+import { composeNativeMessage, nativeMessagesAvailable } from "@/lib/native-messages";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
@@ -77,15 +77,15 @@ export default function TextFollowupScreen() {
     setError("");
     setNotice("");
     try {
-      if (!(await SMS.isAvailableAsync())) throw new Error("Messages is not available on this device.");
-      const result = await SMS.sendSMSAsync(data.phone, data.message);
-      if (result.result === "sent") {
+      if (!nativeMessagesAvailable()) throw new Error("Messages is not available in this iOS build.");
+      const result = await composeNativeMessage(data.phone, data.message);
+      if (result === "sent") {
         await markSent();
         setNotice(`Follow-up to ${data.name} marked sent.`);
-      } else if (result.result === "cancelled") {
+      } else if (result === "cancelled") {
         setNotice("Nothing was sent. Your follow-up is still ready whenever you are.");
       } else {
-        setNotice("Messages opened. KNCT could not confirm whether the text was sent.");
+        setNotice("Messages could not send this follow-up. It remains pending.");
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not open Messages.");
