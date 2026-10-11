@@ -78,11 +78,14 @@ final class KNCTNotifications: RCTEventEmitter {
       let granted = settings.authorizationStatus == .authorized
         || settings.authorizationStatus == .provisional
         || settings.authorizationStatus == .ephemeral
-      resolve([
+      var result: [String: Any] = [
         "granted": granted,
-        "deviceToken": KNCTNotifications.deviceToken as Any,
         "environment": KNCTNotifications.environment,
-      ])
+      ]
+      if let token = KNCTNotifications.deviceToken {
+        result["deviceToken"] = token
+      }
+      resolve(result)
     }
   }
 
