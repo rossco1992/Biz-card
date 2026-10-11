@@ -34,41 +34,29 @@ alter table public.push_devices
   add constraint push_devices_environment_check
   check (environment in ('development', 'production'));
 
--- 0012 stored a different token format. No released native APNs client should rely on
--- those rows, so deactivate them rather than deleting history or guessing that they
--- are valid APNs tokens. A real device re-registers and reactivates its APNs token.
+-- 0012 stored a different token format. Deactivate only incompatible rows.
+-- Valid native APNs tokens are preserved if this migration is ever re-run.
 update public.push_devices
 set active = false,
     updated_at = now()
 where provider = 'apns'
   and (
-    device_token !~ '^[0-9A-Fa-f]+
-
-create index if not exists push_devices_profile_provider_active_idx
-  on public.push_devices (profile_id, provider, active);
-
--- Keep the 0012 queue function and followups.reminded_at column. They are provider-
--- agnostic and remain correct for native APNs reminders.
-
+    device_token !~ '^[0-9A-Fa-f]+$'
     or length(device_token) not between 16 and 512
   );
 
--- APNs device tokens are opaque and Apple explicitly warns not to hard-code their
--- byte size. We only require the app's hexadecimal serialization for active rows;
--- inactive 0012-era rows remain as harmless migration history.
+-- Apple treats device tokens as opaque values and warns against hard-coding their byte size.
+-- KNCT stores the native token bytes as hexadecimal. The format rule applies only to active
+-- rows so legacy 0012 rows can remain as harmless inactive migration history.
 alter table public.push_devices drop constraint if exists push_devices_device_token_format_check;
 alter table public.push_devices
   add constraint push_devices_device_token_format_check
   check (
     not active
-    or (device_token ~ '^[0-9A-Fa-f]+
-
-create index if not exists push_devices_profile_provider_active_idx
-  on public.push_devices (profile_id, provider, active);
-
--- Keep the 0012 queue function and followups.reminded_at column. They are provider-
--- agnostic and remain correct for native APNs reminders.
- and length(device_token) between 16 and 512)
+    or (
+      device_token ~ '^[0-9A-Fa-f]+$'
+      and length(device_token) between 16 and 512
+    )
   );
 
 create index if not exists push_devices_profile_provider_active_idx
