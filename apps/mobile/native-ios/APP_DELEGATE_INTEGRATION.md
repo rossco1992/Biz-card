@@ -9,8 +9,11 @@ Add:
 - KNCTNotifications.swift
 - KNCTMessages.swift
 - KNCTNativeModules.m
+- KNCT-Bridging-Header.h
 
-Make sure each file has the KNCT application target checked in Target Membership.
+Make sure the Swift and Objective-C files have the KNCT application target checked in Target Membership.
+
+In the KNCT target's **Build Settings**, set **Objective-C Bridging Header** to the path of `KNCT-Bridging-Header.h` if the project does not already have a bridging header. If one already exists, add the two React imports from this file to the existing header instead.
 
 ## Enable the Apple capability
 
