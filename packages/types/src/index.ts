@@ -4,8 +4,10 @@ export type SmsSenderStatus = "requested" | "pending" | "approved" | "rejected" 
 export type PushDevice = {
   id: string;
   profile_id: string;
-  expo_push_token: string;
+  device_token: string;
+  provider: "apns";
   platform: "ios" | "android";
+  environment: "development" | "production";
   active: boolean;
   last_seen_at: string;
   created_at: string;
