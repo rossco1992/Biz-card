@@ -235,14 +235,14 @@ test("real SQL: native APNs devices require valid tokens only while active", asy
 
     await assert.rejects(
       db.query(
-        "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,'ExpoPushToken[legacy]','apns','ios','production',true)",
+        "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,'legacy-token-value','apns','ios','production',true)",
         [profile],
       ),
       /push_devices_device_token_format_check/,
     );
 
     await db.query(
-      "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,'ExpoPushToken[legacy]','apns','ios','production',false)",
+      "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,'legacy-token-value','apns','ios','production',false)",
       [profile],
     );
 
