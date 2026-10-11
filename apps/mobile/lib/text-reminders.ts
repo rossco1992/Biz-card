@@ -1,39 +1,34 @@
-import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
 import { resolveWebUrl } from "@biz-card/core";
+import {
+  getNativeNotificationAuthorization,
+  nativeNotificationsAvailable,
+  requestNativeNotificationAuthorization,
+} from "@/lib/native-notifications";
 
 export type TextReminderPermission = "granted" | "denied" | "undetermined";
 
 export async function textReminderPermission(): Promise<TextReminderPermission> {
-  const permission = await Notifications.getPermissionsAsync();
-  if (permission.status === "granted") return "granted";
-  if (permission.status === "denied") return "denied";
-  return "undetermined";
+  if (!nativeNotificationsAvailable()) return "undetermined";
+  const authorization = await getNativeNotificationAuthorization();
+  return authorization.granted ? "granted" : "undetermined";
 }
 
 export async function registerTextReminderDevice(accessToken: string, requestPermission: boolean) {
-  if (Platform.OS === "web") return { status: "unsupported" as const };
+  if (!nativeNotificationsAvailable()) return { status: "unsupported" as const };
 
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("followups", {
-      name: "Follow-up reminders",
-      importance: Notifications.AndroidImportance.HIGH,
-    });
+  let authorization = await getNativeNotificationAuthorization();
+  if (requestPermission || authorization.granted) {
+    authorization = await requestNativeNotificationAuthorization();
   }
 
-  let permission = await Notifications.getPermissionsAsync();
-  if (permission.status !== "granted" && requestPermission) {
-    permission = await Notifications.requestPermissionsAsync();
-  }
-  if (permission.status !== "granted") {
-    return { status: permission.status === "denied" ? "denied" as const : "undetermined" as const };
+  if (!authorization.granted) {
+    return { status: requestPermission ? "denied" as const : "undetermined" as const };
   }
 
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-  if (!projectId) throw new Error("KNCT push notifications are missing an EAS project ID.");
+  if (!authorization.deviceToken || !authorization.environment) {
+    throw new Error("Apple push registration did not return a device token.");
+  }
 
-  const expoPushToken = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
   const base = resolveWebUrl(process.env.EXPO_PUBLIC_WEB_URL).replace(/\/$/, "");
   const response = await fetch(`${base}/api/push/register`, {
     method: "POST",
@@ -42,8 +37,8 @@ export async function registerTextReminderDevice(accessToken: string, requestPer
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      expo_push_token: expoPushToken,
-      platform: Platform.OS,
+      device_token: authorization.deviceToken,
+      environment: authorization.environment,
     }),
   });
   const result = await response.json().catch(() => null);
