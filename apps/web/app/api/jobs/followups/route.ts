@@ -158,7 +158,14 @@ export async function GET(request: Request) {
           .eq("platform", "ios")
           .eq("active", true),
       ]);
-      if (connectionError || devicesError) throw connectionError || devicesError;
+      if (connectionError || devicesError) {
+        console.error("native reminder device lookup unavailable", connectionError || devicesError);
+        const { error: saveError } = await db.from("followups")
+          .update({ error: "Text reminder delivery is temporarily unavailable.", updated_at: new Date().toISOString() })
+          .eq("id", job.id).eq("status", "scheduled");
+        if (saveError) throw saveError;
+        return "failed";
+      }
 
       if (!devices?.length) {
         const { error: saveError } = await db.from("followups")
