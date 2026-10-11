@@ -217,3 +217,44 @@ test("real SQL: device SMS reminders are claimed once without marking the text s
     await db.close();
   }
 });
+
+test("real SQL: native APNs devices require valid tokens only while active", async () => {
+  const db = await database();
+  try {
+    const profile = randomUUID();
+    await db.query(
+      "insert into profiles(id,slug,full_name,email) values ($1,'apns-owner','APNs Owner','owner@example.com')",
+      [profile],
+    );
+
+    const validToken = "ab".repeat(32);
+    await db.query(
+      "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,$2,'apns','ios','production',true)",
+      [profile, validToken],
+    );
+
+    await assert.rejects(
+      db.query(
+        "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,'ExpoPushToken[legacy]','apns','ios','production',true)",
+        [profile],
+      ),
+      /push_devices_device_token_format_check/,
+    );
+
+    await db.query(
+      "insert into push_devices(profile_id,device_token,provider,platform,environment,active) values ($1,'ExpoPushToken[legacy]','apns','ios','production',false)",
+      [profile],
+    );
+
+    const rows = await db.query(
+      "select device_token,active from push_devices where profile_id=$1 order by active desc",
+      [profile],
+    );
+    assert.equal(rows.rows.length, 2);
+    assert.equal(rows.rows[0].device_token, validToken);
+    assert.equal(rows.rows[0].active, true);
+    assert.equal(rows.rows[1].active, false);
+  } finally {
+    await db.close();
+  }
+});
