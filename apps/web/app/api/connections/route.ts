@@ -1,9 +1,8 @@
-import { smsAvailable } from "@/lib/sms-availability";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { validEmail } from "@/lib/mailbox-providers";
 import { readJsonBody, RequestBodyError } from "@/lib/http-security";
-import { appendSmsOptOut, buildEventContext, formatEventDate, firstNameFromFullName, mergeTemplate, normalizeNorthAmericanPhone } from "@biz-card/core";
+import { buildEventContext, formatEventDate, firstNameFromFullName, mergeTemplate, normalizeNorthAmericanPhone } from "@biz-card/core";
 import { getPublicProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -45,7 +44,6 @@ export async function POST(request: Request) {
   const email = clean(body.email, 180).toLowerCase();
   const phone = clean(body.phone, 40);
   const consent = body.consent === true;
-  const smsConsent = smsAvailable() && body.sms_consent === true;
   const normalizedPhone = normalizeNorthAmericanPhone(phone);
 
   if (!slug || !firstName || !email || !consent) {
@@ -54,9 +52,6 @@ export async function POST(request: Request) {
 
   if (!validEmail(email)) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
-  }
-  if (smsConsent && !normalizedPhone) {
-    return NextResponse.json({ error: "Enter a valid mobile number to receive the text follow-up." }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();
@@ -146,7 +141,7 @@ export async function POST(request: Request) {
       email,
       phone: normalizedPhone || phone || null,
       consent_at: new Date().toISOString(),
-      sms_consent_at: smsConsent && normalizedPhone ? new Date().toISOString() : null,
+      sms_consent_at: null,
       mode_name_snapshot: mode?.name ?? null,
       event_id: event?.id ?? null,
       event_name_snapshot: event?.name ?? null,
@@ -238,69 +233,50 @@ export async function POST(request: Request) {
   let smsScheduledAt: string | null = null;
   let smsFollowupStatus: "paused" | "scheduled" | "failed" = "paused";
 
-  if (profile.followup_enabled && profile.sms_followup_enabled && mode?.sms_enabled && normalizedPhone && smsConsent) {
-    const recipientPhone = normalizedPhone;
-    const [{ data: hasSmsAccess, error: smsAccessError }, { data: sender, error: senderError }] = await Promise.all([
-        supabase.rpc("profile_has_sms", { p_profile_id: profile.id }),
-        supabase
-          .from("sms_senders")
-          .select("status,twilio_subaccount_sid,messaging_service_sid,phone_number")
-          .eq("profile_id", profile.id)
-          .maybeSingle(),
-      ]);
+  // Device text reminders are intentionally not sent from the server. KNCT
+  // stores the prepared message, sends the owner a push at the due time, and
+  // lets iOS/Android open the native Messages composer for the final send.
+  if (profile.followup_enabled && mode?.sms_enabled && normalizedPhone) {
+    const delayHours = Math.min(336, Math.max(1, mode.delay_hours ?? 24));
+    smsScheduledAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
+    const values = {
+      first_name: firstName,
+      last_name: lastName,
+      full_name: [firstName, lastName].filter(Boolean).join(" "),
+      my_first_name: firstNameFromFullName(profile.full_name),
+      event_name: event?.name ?? "the event",
+      event_location: event?.location ?? "",
+      event_date: formatEventDate(event?.event_date),
+      event_context: buildEventContext(event?.name, event?.location),
+    };
+    const smsBody = mergeTemplate(mode.sms_body_template || mode.body_template, values);
 
-      if (smsAccessError || senderError) {
-        return NextResponse.json({ error: "Connection saved, but text scheduling is unavailable." }, { status: 503 });
-      }
+    const { error: smsError } = await supabase
+      .from("followups")
+      .insert({
+        connection_id: connection.id,
+        profile_id: profile.id,
+        channel: "sms",
+        mode_id: mode.id,
+        send_at: smsScheduledAt,
+        status: "scheduled",
+        delivery_provider: "device",
+        mailbox_id: null,
+        error: null,
+        subject_snapshot: "Text follow-up",
+        body_snapshot: smsBody,
+        body_html_snapshot: null,
+        recipient_email: null,
+        recipient_phone: normalizedPhone,
+      });
 
-      const smsReady = Boolean(
-        hasSmsAccess
-        && sender?.status === "approved"
-        && sender.twilio_subaccount_sid
-        && sender.messaging_service_sid
-        && sender.phone_number,
-      );
-
-      const delayHours = Math.min(336, Math.max(1, mode.delay_hours ?? 24));
-      smsScheduledAt = new Date(Date.now() + delayHours * 60 * 60 * 1000).toISOString();
-      const values = {
-        first_name: firstName,
-        last_name: lastName,
-        full_name: [firstName, lastName].filter(Boolean).join(" "),
-        my_first_name: firstNameFromFullName(profile.full_name),
-        event_name: event?.name ?? "the event",
-        event_location: event?.location ?? "",
-        event_date: formatEventDate(event?.event_date),
-        event_context: buildEventContext(event?.name, event?.location),
-      };
-      const smsBody = appendSmsOptOut(mergeTemplate(mode.sms_body_template || mode.body_template, values));
-
-      const { error: smsError } = await supabase
-        .from("followups")
-        .insert({
-          connection_id: connection.id,
-          profile_id: profile.id,
-          channel: "sms",
-          mode_id: mode.id,
-          send_at: smsScheduledAt,
-          status: smsReady ? "scheduled" : "failed",
-          delivery_provider: "twilio",
-          mailbox_id: null,
-          error: smsReady ? null : "Your KNCT texting number is not currently approved for automatic messages.",
-          subject_snapshot: "SMS follow-up",
-          body_snapshot: smsBody,
-          body_html_snapshot: null,
-          recipient_email: null,
-          recipient_phone: recipientPhone,
-        });
-
-      if (smsError) {
-        console.error("SMS followup insert failed", smsError);
-        return NextResponse.json({ error: "Connection saved, but text scheduling failed." }, { status: 500 });
-      }
-
-    smsFollowupStatus = smsReady ? "scheduled" : "failed";
-    if (!smsReady) smsScheduledAt = null;
+    if (smsError) {
+      console.error("device SMS followup insert failed", smsError);
+      smsFollowupStatus = "failed";
+      smsScheduledAt = null;
+    } else {
+      smsFollowupStatus = "scheduled";
+    }
   }
 
   return NextResponse.json({
